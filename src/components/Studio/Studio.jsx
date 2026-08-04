@@ -77,15 +77,15 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
 
   return (
     <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '1.5rem', marginBottom: '2.5rem' }}>
         <div>
           <h1>Creator</h1>
           <p style={{ color: 'var(--text-muted)' }}>
-            Design your multi-axis quiz, customize colors, add questions, and publish.
+            Design your test, customize colors, add questions, and publish.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
           <button className="btn btn-secondary btn-sm" onClick={onSaveFile}>
             <Download size={16} /> Save .8val File
           </button>
@@ -102,7 +102,7 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
           </button>
 
           <button className="btn btn-success btn-sm" onClick={onPlayQuiz}>
-            <Play size={16} /> Test Run Quiz
+            <Play size={16} /> Demo the Test
           </button>
         </div>
       </div>
@@ -116,11 +116,11 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
 
       {/* General Settings Card */}
       <div className="axis-card" style={{ textAlign: 'left', marginBottom: '2rem', padding: '1.5rem' }}>
-        <h3 style={{ marginBottom: '1rem' }}>General Quiz Settings</h3>
+        <h3 style={{ marginBottom: '1rem' }}>General Test Settings</h3>
 
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
           <div className="form-group">
-            <label className="form-label">Quiz Title</label>
+            <label className="form-label">Test Title</label>
             <input
               type="text"
               className="form-input"
@@ -149,7 +149,7 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
             className="form-textarea"
             value={quiz.description || ''}
             onChange={(e) => handleMetadataChange('description', e.target.value)}
-            placeholder="Brief explanation of what this quiz measures..."
+            placeholder="Brief explanation of what this test measures..."
           />
         </div>
       </div>
@@ -234,21 +234,21 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
           className={`studio-tab ${activeTab === 'axes' ? 'active' : ''}`}
           onClick={() => setActiveTab('axes')}
         >
-          1. Axes & Spectrums ({quiz.axes?.length || 0})
+          1. Axes & Values ({quiz.axes?.length || 0})
         </button>
 
         <button
           className={`studio-tab ${activeTab === 'questions' ? 'active' : ''}`}
           onClick={() => setActiveTab('questions')}
         >
-          2. Questions & Impacts ({quiz.questions?.length || 0})
+          2. Questions & Weights ({quiz.questions?.length || 0})
         </button>
 
         <button
           className={`studio-tab ${activeTab === 'ideologies' ? 'active' : ''}`}
           onClick={() => setActiveTab('ideologies')}
         >
-          3. Ideology Match Rules ({quiz.ideologies?.length || 0})
+          3. Ideologies ({quiz.ideologies?.length || 0})
         </button>
       </div>
 

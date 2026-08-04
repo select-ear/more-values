@@ -21,7 +21,11 @@ export default function App() {
   };
 
   useEffect(() => {
-    const t = currentQuiz.theme || DEFAULT_8VALUES_QUIZ.theme;
+    let t = DEFAULT_8VALUES_QUIZ.theme;
+    if (activeTab === 'play' || activeTab === 'results') {
+      t = currentQuiz.theme || DEFAULT_8VALUES_QUIZ.theme;
+    }
+    
     document.body.style.backgroundColor = t.background;
     document.documentElement.style.setProperty('--bg-primary', t.background);
     document.documentElement.style.setProperty('--heading-color', t.headings);
@@ -33,7 +37,7 @@ export default function App() {
     document.documentElement.style.setProperty('--html-bg', t.htmlBg);
     document.documentElement.style.setProperty('--center-bg', t.centerBg);
     document.documentElement.style.backgroundColor = t.htmlBg;
-  }, [currentQuiz.theme]);
+  }, [currentQuiz.theme, activeTab]);
 
   const fileInputRef = useRef(null);
 

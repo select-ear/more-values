@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { ExploreHub } from './components/ExploreHub';
-import { QuizPlayer } from './components/QuizPlayer';
-import { QuizResults } from './components/QuizResults';
+import { TestPlayer } from './components/TestPlayer';
+import { TestResults } from './components/TestResults';
 import { Studio } from './components/Studio/Studio';
-import { DEFAULT_8VALUES_QUIZ } from './utils/default8values';
-import { decodeQuizFromUrlHash, downloadQuizJson, parseQuizJsonFile } from './utils/compressor';
+import { DEFAULT_8VALUES_TEST } from './utils/default8values';
+import { decodeTestFromUrlHash, downloadTestJson, parseTestJsonFile } from './utils/compressor';
 import { AuthModal } from './components/AuthModal';
 import { ProfilePage } from './components/ProfilePage';
+import { useTestHistory } from './hooks/useTestHistory';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('explore');
-  const [currentQuiz, setCurrentQuiz] = useState(DEFAULT_8VALUES_QUIZ);
-  const [quizResults, setQuizResults] = useState(null);
+  const { test: currentTest, setTest: setCurrentTest, undo, redo, canUndo, canRedo, resetHistory } = useTestHistory(DEFAULT_8VALUES_TEST);
+  const [testResults, setTestResults] = useState(null);
   const [isThemeEditMode, setIsThemeEditMode] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [viewingUsername, setViewingUsername] = useState(null);
   
   const [user, setUser] = useState(null);
@@ -45,30 +47,40 @@ export default function App() {
   };
 
   const handleUpdateTheme = (field, value) => {
-    setCurrentQuiz(prev => ({
+    setCurrentTest(prev => ({
       ...prev,
-      theme: { ...(prev.theme || DEFAULT_8VALUES_QUIZ.theme), [field]: value }
+      theme: { ...(prev.theme || DEFAULT_8VALUES_TEST.theme), [field]: value }
     }));
   };
 
   useEffect(() => {
-    let t = DEFAULT_8VALUES_QUIZ.theme;
     if (activeTab === 'play' || activeTab === 'results') {
-      t = currentQuiz.theme || DEFAULT_8VALUES_QUIZ.theme;
+      const t = currentTest.theme || DEFAULT_8VALUES_TEST.theme;
+      document.body.style.backgroundColor = t.background;
+      document.documentElement.style.setProperty('--bg-primary', t.background);
+      document.documentElement.style.setProperty('--heading-color', t.headings);
+      document.documentElement.style.setProperty('--text-color', t.text);
+      document.documentElement.style.setProperty('--line-color', t.lines);
+      document.documentElement.style.setProperty('--container-bg', t.containerBg);
+      document.documentElement.style.setProperty('--border-color', t.border);
+      document.documentElement.style.setProperty('--results-bar-bg', t.resultsBarBg);
+      document.documentElement.style.setProperty('--html-bg', t.htmlBg);
+      document.documentElement.style.setProperty('--center-bg', t.centerBg);
+      document.documentElement.style.backgroundColor = t.htmlBg;
+    } else {
+      document.body.style.backgroundColor = '';
+      document.documentElement.style.removeProperty('--bg-primary');
+      document.documentElement.style.removeProperty('--heading-color');
+      document.documentElement.style.removeProperty('--text-color');
+      document.documentElement.style.removeProperty('--line-color');
+      document.documentElement.style.removeProperty('--container-bg');
+      document.documentElement.style.removeProperty('--border-color');
+      document.documentElement.style.removeProperty('--results-bar-bg');
+      document.documentElement.style.removeProperty('--html-bg');
+      document.documentElement.style.removeProperty('--center-bg');
+      document.documentElement.style.backgroundColor = '';
     }
-    
-    document.body.style.backgroundColor = t.background;
-    document.documentElement.style.setProperty('--bg-primary', t.background);
-    document.documentElement.style.setProperty('--heading-color', t.headings);
-    document.documentElement.style.setProperty('--text-color', t.text);
-    document.documentElement.style.setProperty('--line-color', t.lines);
-    document.documentElement.style.setProperty('--container-bg', t.containerBg);
-    document.documentElement.style.setProperty('--border-color', t.border);
-    document.documentElement.style.setProperty('--results-bar-bg', t.resultsBarBg);
-    document.documentElement.style.setProperty('--html-bg', t.htmlBg);
-    document.documentElement.style.setProperty('--center-bg', t.centerBg);
-    document.documentElement.style.backgroundColor = t.htmlBg;
-  }, [currentQuiz.theme, activeTab]);
+  }, [currentTest.theme, activeTab]);
 
   const fileInputRef = useRef(null);
 
@@ -76,24 +88,24 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash;
-      if (hash && hash.includes('#quiz=')) {
-        const quizParam = hash.replace('#quiz=', '');
+      if (hash && hash.includes('#test=')) {
+        const testParam = hash.replace('#test=', '');
 
         // Check if hash is short backend ID or compressed string payload
-        if (quizParam.length < 12) {
-          fetch(`http://localhost:4000/api/quizzes/${quizParam}`)
+        if (testParam.length < 12) {
+          fetch(`http://localhost:4000/api/tests/${testParam}`)
             .then(r => r.json())
             .then(data => {
-              if (data.success && data.quiz) {
-                setCurrentQuiz(data.quiz);
+              if (data.success && data.test) {
+                setCurrentTest(data.test);
                 setActiveTab('play');
               }
             })
-            .catch(err => console.error("Error loading server quiz ID:", err));
+            .catch(err => console.error("Error loading server test ID:", err));
         } else {
-          const decoded = decodeQuizFromUrlHash(hash);
+          const decoded = decodeTestFromUrlHash(hash);
           if (decoded) {
-            setCurrentQuiz(decoded);
+            setCurrentTest(decoded);
             setActiveTab('play');
           }
         }
@@ -107,69 +119,55 @@ export default function App() {
 
 
 
-  const handleSelectQuiz = async (quizSummary) => {
-    if (quizSummary.id === '8values-classic') {
-      setCurrentQuiz(DEFAULT_8VALUES_QUIZ);
+  const handleSelectTest = async (testSummary) => {
+    setIsDemoMode(false);
+    if (testSummary.id === '8values-classic') {
+      resetHistory(DEFAULT_8VALUES_TEST);
       setActiveTab('play');
       return;
     }
     try {
-      const res = await fetch(`http://localhost:4000/api/quizzes/${quizSummary.id}`);
+      const res = await fetch(`http://localhost:4000/api/tests/${testSummary.id}`);
       const data = await res.json();
       if (data.success) {
-        setCurrentQuiz(data.quiz);
+        resetHistory(data.test);
         setActiveTab('play');
       } else {
-        alert('Could not load quiz data.');
+        alert('Could not load test data.');
       }
     } catch (err) {
       alert('Could not connect to server.');
     }
   };
 
-  const handleEditQuiz = async (quizSummary) => {
-    if (quizSummary.id === '8values-classic') {
-      setCurrentQuiz(DEFAULT_8VALUES_QUIZ);
+  const handleEditTest = async (testSummary) => {
+    setIsDemoMode(false);
+    if (testSummary.id === '8values-classic') {
+      resetHistory(DEFAULT_8VALUES_TEST);
       setActiveTab('studio');
       return;
     }
     try {
-      const res = await fetch(`http://localhost:4000/api/quizzes/${quizSummary.id}`);
+      const res = await fetch(`http://localhost:4000/api/tests/${testSummary.id}`);
       const data = await res.json();
       if (data.success) {
-        setCurrentQuiz(data.quiz);
+        resetHistory(data.test);
         setActiveTab('studio');
       } else {
-        alert('Could not load quiz data.');
+        alert('Could not load test data.');
       }
     } catch (err) {
       alert('Could not connect to server.');
     }
   };
 
-  const handleQuizComplete = (results) => {
-    setQuizResults(results);
+  const handleTestComplete = (results) => {
+    setTestResults(results);
     setActiveTab('results');
   };
 
-  const handleExportJson = () => {
-    downloadQuizJson(currentQuiz);
-  };
 
-  const handleImportFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const loadedQuiz = await parseQuizJsonFile(file);
-        setCurrentQuiz(loadedQuiz);
-        setActiveTab('play');
-      } catch (err) {
-        alert("Failed to load .8val.json file: " + err.message);
-      }
-    }
-  };
-
-  const handlePublishQuiz = async (quizToPublish) => {
+  const handlePublishTest = async (testToPublish, isDraft = false) => {
     try {
       const response = await fetch('http://localhost:4000/api/publish', {
         method: 'POST',
@@ -177,7 +175,7 @@ export default function App() {
           'Content-Type': 'application/json',
           ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
         },
-        body: JSON.stringify(quizToPublish)
+        body: JSON.stringify({ ...testToPublish, isDraft })
       });
       return await response.json();
     } catch (err) {
@@ -191,8 +189,6 @@ export default function App() {
       <Navbar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
-        onExportJson={handleExportJson}
-        onImportJsonClick={() => fileInputRef.current?.click()} 
         user={user}
         onLoginClick={() => setShowAuthModal(true)}
         onLogoutClick={handleLogout}
@@ -209,20 +205,13 @@ export default function App() {
         />
       )}
 
-      {/* Hidden File Input for Loading .8val.json files */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        accept=".json,.8val.json"
-        style={{ display: 'none' }}
-        onChange={handleImportFileChange}
-      />
+
 
       <main style={{ flex: 1 }}>
         {activeTab === 'explore' && (
           <ExploreHub
-            onSelectQuiz={handleSelectQuiz}
-            onEditQuiz={handleEditQuiz}
+            onSelectTest={handleSelectTest}
+            onEditTest={handleEditTest}
             user={user}
             authToken={authToken}
             onViewProfile={(username) => {
@@ -233,9 +222,9 @@ export default function App() {
         )}
 
         {activeTab === 'play' && (
-          <QuizPlayer
-            quiz={currentQuiz}
-            onComplete={handleQuizComplete}
+          <TestPlayer
+            test={currentTest}
+            onComplete={handleTestComplete}
             onEditInStudio={() => setActiveTab('studio')}
             isThemeEditMode={isThemeEditMode}
             onUpdateTheme={handleUpdateTheme}
@@ -243,9 +232,9 @@ export default function App() {
         )}
 
         {activeTab === 'results' && (
-          <QuizResults
-            quiz={currentQuiz}
-            results={quizResults}
+          <TestResults
+            test={currentTest}
+            results={testResults}
             onRetake={() => setActiveTab('play')}
             onEditInStudio={() => setActiveTab('studio')}
           />
@@ -253,11 +242,17 @@ export default function App() {
 
         {activeTab === 'studio' && (
           <Studio
-            quiz={currentQuiz}
-            setQuiz={setCurrentQuiz}
-            onPlayQuiz={() => setActiveTab('play')}
-            onSaveFile={handleExportJson}
-            onPublish={handlePublishQuiz}
+            test={currentTest}
+            setTest={setCurrentTest}
+            undo={undo}
+            redo={redo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onPlayTest={() => {
+              setIsDemoMode(true);
+              setActiveTab('play');
+            }}
+            onPublish={handlePublishTest}
             isThemeEditMode={isThemeEditMode}
             setIsThemeEditMode={setIsThemeEditMode}
             user={user}
@@ -269,8 +264,8 @@ export default function App() {
             username={viewingUsername}
             user={user}
             authToken={authToken}
-            onSelectQuiz={handleSelectQuiz}
-            onEditQuiz={handleEditQuiz}
+            onSelectTest={handleSelectTest}
+            onEditTest={handleEditTest}
             onGoBack={() => setActiveTab('explore')}
           />
         )}
@@ -285,7 +280,10 @@ export default function App() {
       {isThemeEditMode && (
         <button 
           className="exit-theme-btn"
-          onClick={() => setIsThemeEditMode(false)} 
+          onClick={() => {
+            setIsThemeEditMode(false);
+            setActiveTab('studio');
+          }} 
           style={{ 
             position: 'fixed', 
             bottom: '2rem', 
@@ -307,6 +305,38 @@ export default function App() {
           onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(-50%) scale(1)'}
         >
           Exit theme editor
+        </button>
+      )}
+
+      {/* Global Exit Demo Floating Button */}
+      {isDemoMode && !isThemeEditMode && (activeTab === 'play' || activeTab === 'results') && (
+        <button 
+          className="exit-demo-btn"
+          onClick={() => {
+            setIsDemoMode(false);
+            setActiveTab('studio');
+          }} 
+          style={{ 
+            position: 'fixed', 
+            bottom: '2rem', 
+            left: '50%', 
+            transform: 'translateX(-50%)', 
+            zIndex: 99999, 
+            background: '#2196f3', 
+            color: 'white', 
+            border: 'none', 
+            padding: '0.75rem 1.5rem', 
+            borderRadius: '50px', 
+            fontWeight: 700, 
+            cursor: 'pointer', 
+            transition: 'all 0.2s ease', 
+            fontFamily: "'Montserrat', sans-serif",
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)'}
+          onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(-50%) scale(1)'}
+        >
+          Exit Demo
         </button>
       )}
     </div>

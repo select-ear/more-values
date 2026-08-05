@@ -51,11 +51,6 @@ export function QuestionEditor({ questions, setQuestions, axes }) {
             Add statements and define which direction they push the user on each axis when they agree.
           </p>
         </div>
-
-        <button className="btn btn-primary btn-sm" onClick={handleAddQuestion}>
-          <Plus size={16} />
-          Add Question
-        </button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -171,6 +166,10 @@ export function QuestionEditor({ questions, setQuestions, axes }) {
           </div>
         ))}
       </div>
+
+      <button className="btn btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={handleAddQuestion}>
+        <Plus size={20} style={{ marginRight: '0.5rem' }} /> Add Another Question
+      </button>
     </div>
   );
 }

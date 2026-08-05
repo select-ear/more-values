@@ -1,7 +1,7 @@
 import React from 'react';
 import { Compass, Edit3, Play, Moon, Sun, Download, Upload } from 'lucide-react';
 
-export function Navbar({ activeTab, setActiveTab, onExportJson, onImportJsonClick, user, onLoginClick, onLogoutClick, onViewProfile }) {
+export function Navbar({ activeTab, setActiveTab, user, onLoginClick, onLogoutClick, onViewProfile }) {
   return (
     <header className="top-nav">
       <div className="top-brand" onClick={() => setActiveTab('explore')}>
@@ -13,7 +13,7 @@ export function Navbar({ activeTab, setActiveTab, onExportJson, onImportJsonClic
           className={`menu-btn ${activeTab === 'explore' ? 'active' : ''}`}
           onClick={() => setActiveTab('explore')}
         >
-          Explore Tests
+          Browse Tests
         </button>
 
         <button
@@ -23,13 +23,7 @@ export function Navbar({ activeTab, setActiveTab, onExportJson, onImportJsonClic
           Creator
         </button>
 
-        <button className="menu-btn" onClick={onExportJson} title="Save Quiz JSON File">
-          <Download size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Save .8val
-        </button>
 
-        <button className="menu-btn" onClick={onImportJsonClick} title="Load Quiz JSON File">
-          <Upload size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Load .8val
-        </button>
 
         {user ? (
           <>

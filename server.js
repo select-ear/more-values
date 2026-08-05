@@ -16,7 +16,7 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.sqlite');
-const QUIZZES_DIR = path.join(DATA_DIR, 'quizzes');
+const TESTS_DIR = path.join(DATA_DIR, 'tests');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const SECRET_FILE = path.join(DATA_DIR, 'secret.json');
 
@@ -83,7 +83,7 @@ async function initDB() {
       socialMedia TEXT,
       profilePicture TEXT
     );
-    CREATE TABLE IF NOT EXISTS quizzes (
+    CREATE TABLE IF NOT EXISTS tests (
       id TEXT PRIMARY KEY,
       ownerId TEXT,
       title TEXT,
@@ -93,6 +93,7 @@ async function initDB() {
       questionCount INTEGER,
       publishedAt TEXT,
       document TEXT,
+      isDraft INTEGER DEFAULT 0,
       FOREIGN KEY(ownerId) REFERENCES users(id)
     );
   `);
@@ -101,9 +102,11 @@ async function initDB() {
     await db.exec('ALTER TABLE users ADD COLUMN bio TEXT;');
     await db.exec('ALTER TABLE users ADD COLUMN socialMedia TEXT;');
     await db.exec('ALTER TABLE users ADD COLUMN profilePicture TEXT;');
-  } catch (e) {
-    // Columns already exist
-  }
+  } catch (e) {}
+
+  try {
+    await db.exec('ALTER TABLE tests ADD COLUMN isDraft INTEGER DEFAULT 0;');
+  } catch (e) {}
 
   // Migration Logic: Check if users.json exists
   if (fs.existsSync(USERS_FILE)) {
@@ -115,17 +118,17 @@ async function initDB() {
     fs.renameSync(USERS_FILE, USERS_FILE + '.migrated');
   }
 
-  // Migration Logic: Check if quizzes dir exists
-  if (fs.existsSync(QUIZZES_DIR)) {
-    console.log('Migrating quizzes to SQLite...');
-    const files = fs.readdirSync(QUIZZES_DIR).filter(f => f.endsWith('.json'));
+  // Migration Logic: Check if tests dir exists
+  if (fs.existsSync(TESTS_DIR)) {
+    console.log('Migrating tests to SQLite...');
+    const files = fs.readdirSync(TESTS_DIR).filter(f => f.endsWith('.json'));
     for (const file of files) {
-      const content = fs.readFileSync(path.join(QUIZZES_DIR, file), 'utf8');
+      const content = fs.readFileSync(path.join(TESTS_DIR, file), 'utf8');
       const data = JSON.parse(content);
       const qId = data.id || file.replace('.json', '');
       
       await db.run(`
-        INSERT OR IGNORE INTO quizzes (id, ownerId, title, description, author, axisCount, questionCount, publishedAt, document)
+        INSERT OR IGNORE INTO tests (id, ownerId, title, description, author, axisCount, questionCount, publishedAt, document)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         qId,
@@ -139,7 +142,7 @@ async function initDB() {
         content
       ]);
     }
-    fs.renameSync(QUIZZES_DIR, QUIZZES_DIR + '_migrated');
+    fs.renameSync(TESTS_DIR, TESTS_DIR + '_migrated');
   }
 }
 
@@ -184,22 +187,25 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-app.get('/api/profile/:username', async (req, res) => {
+app.get('/api/profile/:username', authMiddleware, async (req, res) => {
   try {
     const user = await db.get('SELECT id, username, bio, socialMedia, profilePicture FROM users WHERE username = ? COLLATE NOCASE', [req.params.username]);
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
     
-    const quizzes = await db.all(`
-      SELECT q.id, q.title, q.description, q.author, q.ownerId, q.axisCount, q.questionCount, q.publishedAt, u.username as ownerUsername
-      FROM quizzes q
+    const isOwner = req.user && req.user.id === user.id;
+    const draftCondition = isOwner ? '' : 'AND (q.isDraft = 0 OR q.isDraft IS NULL)';
+
+    const tests = await db.all(`
+      SELECT q.id, q.title, q.description, q.author, q.ownerId, q.axisCount, q.questionCount, q.publishedAt, u.username as ownerUsername, q.isDraft
+      FROM tests q
       JOIN users u ON q.ownerId = u.id
-      WHERE u.id = ?
+      WHERE u.id = ? ${draftCondition}
       ORDER BY q.publishedAt DESC
     `, [user.id]);
 
-    res.json({ success: true, profile: user, quizzes });
+    res.json({ success: true, profile: user, tests });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -220,28 +226,29 @@ app.put('/api/profile', authMiddleware, requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/quizzes', async (req, res) => {
+app.get('/api/tests', async (req, res) => {
   try {
-    // Return all quizzes with the owner's username
-    const quizzes = await db.all(`
+    // Return all tests with the owner's username
+    const tests = await db.all(`
       SELECT q.id, q.title, q.description, q.author, q.ownerId, q.axisCount, q.questionCount, q.publishedAt, u.username as ownerUsername
-      FROM quizzes q
+      FROM tests q
       LEFT JOIN users u ON q.ownerId = u.id
+      WHERE q.isDraft = 0 OR q.isDraft IS NULL
       ORDER BY q.publishedAt DESC
     `);
-    res.json({ success: true, quizzes });
+    res.json({ success: true, tests });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-app.get('/api/quizzes/:id', async (req, res) => {
+app.get('/api/tests/:id', async (req, res) => {
   try {
-    const row = await db.get('SELECT document FROM quizzes WHERE id = ?', [req.params.id]);
+    const row = await db.get('SELECT document FROM tests WHERE id = ?', [req.params.id]);
     if (!row) {
-      return res.status(404).json({ success: false, error: 'Quiz not found' });
+      return res.status(404).json({ success: false, error: 'Test not found' });
     }
-    res.json({ success: true, quiz: JSON.parse(row.document) });
+    res.json({ success: true, test: JSON.parse(row.document) });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -249,68 +256,70 @@ app.get('/api/quizzes/:id', async (req, res) => {
 
 app.post('/api/publish', authMiddleware, requireAuth, async (req, res) => {
   try {
-    const quiz = req.body;
-    if (!quiz || !quiz.title || !Array.isArray(quiz.axes) || !Array.isArray(quiz.questions)) {
-      return res.status(400).json({ success: false, error: 'Invalid quiz payload' });
+    const test = req.body;
+    if (!test || !test.title || !Array.isArray(test.axes) || !Array.isArray(test.questions)) {
+      return res.status(400).json({ success: false, error: 'Invalid test payload' });
     }
 
-    let quizId = quiz.id && quiz.id !== '8values-classic' ? quiz.id : generateId();
+    let testId = test.id && test.id !== '8values-classic' ? test.id : generateId();
+    const isDraft = test.isDraft ? 1 : 0;
     
     // Check ownership if overwriting
-    const existing = await db.get('SELECT ownerId FROM quizzes WHERE id = ?', [quizId]);
+    const existing = await db.get('SELECT ownerId FROM tests WHERE id = ?', [testId]);
     if (existing && existing.ownerId && existing.ownerId !== req.user.id) {
       // Not the owner! Fork it implicitly by giving it a new ID.
-      quizId = generateId();
+      testId = generateId();
     }
 
-    const publishedQuiz = {
-      ...quiz,
-      id: quizId,
+    const publishedTest = {
+      ...test,
+      id: testId,
       ownerId: req.user.id,
-      publishedAt: quiz.publishedAt || new Date().toISOString()
+      publishedAt: test.publishedAt || new Date().toISOString()
     };
 
-    const documentString = JSON.stringify(publishedQuiz);
+    const documentString = JSON.stringify(publishedTest);
 
     await db.run(`
-      INSERT OR REPLACE INTO quizzes (id, ownerId, title, description, author, axisCount, questionCount, publishedAt, document)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO tests (id, ownerId, title, description, author, axisCount, questionCount, publishedAt, document, isDraft)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      quizId,
+      testId,
       req.user.id,
-      publishedQuiz.title || 'Untitled',
-      publishedQuiz.description || '',
-      publishedQuiz.author || 'Anonymous',
-      publishedQuiz.axes?.length || 0,
-      publishedQuiz.questions?.length || 0,
-      publishedQuiz.publishedAt,
-      documentString
+      publishedTest.title || 'Untitled',
+      publishedTest.description || '',
+      publishedTest.author || 'Anonymous',
+      publishedTest.axes?.length || 0,
+      publishedTest.questions?.length || 0,
+      publishedTest.publishedAt,
+      documentString,
+      isDraft
     ]);
 
     res.json({
       success: true,
-      id: quizId,
+      id: testId,
       ownerId: req.user.id,
-      message: 'Quiz published successfully!',
-      shareUrl: `/quiz/${quizId}`
+      message: 'Test published successfully!',
+      shareUrl: `/test/${testId}`
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-app.delete('/api/quizzes/:id', authMiddleware, requireAuth, async (req, res) => {
+app.delete('/api/tests/:id', authMiddleware, requireAuth, async (req, res) => {
   try {
-    const quiz = await db.get('SELECT ownerId FROM quizzes WHERE id = ?', [req.params.id]);
-    if (!quiz) {
-      return res.status(404).json({ success: false, error: 'Quiz not found' });
+    const test = await db.get('SELECT ownerId FROM tests WHERE id = ?', [req.params.id]);
+    if (!test) {
+      return res.status(404).json({ success: false, error: 'Test not found' });
     }
-    if (quiz.ownerId !== req.user.id) {
-      return res.status(403).json({ success: false, error: 'Forbidden: You do not own this quiz' });
+    if (test.ownerId !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'Forbidden: You do not own this test' });
     }
     
-    await db.run('DELETE FROM quizzes WHERE id = ?', [req.params.id]);
-    res.json({ success: true, message: 'Quiz deleted successfully' });
+    await db.run('DELETE FROM tests WHERE id = ?', [req.params.id]);
+    res.json({ success: true, message: 'Test deleted successfully' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

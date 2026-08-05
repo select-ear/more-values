@@ -34,9 +34,9 @@ const loadImage = (src) => new Promise((resolve) => {
 });
 
 /**
- * Generates an 8values-style PNG canvas image of quiz results using SVG vector images.
+ * Generates an 8values-style PNG canvas image of test results using SVG vector images.
  */
-export async function exportResultsCanvas(quizTitle, matchedIdeology, axisResults, quizAxes) {
+export async function exportResultsCanvas(testTitle, matchedIdeology, axisResults, testAxes) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
@@ -59,7 +59,7 @@ export async function exportResultsCanvas(quizTitle, matchedIdeology, axisResult
   ctx.fillStyle = '#222222';
   ctx.font = '700 80px Montserrat, sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText(quizTitle, 20, 90);
+  ctx.fillText(testTitle, 20, 90);
 
   // Ideology Match
   ctx.fillStyle = '#444444';
@@ -141,7 +141,7 @@ export async function exportResultsCanvas(quizTitle, matchedIdeology, axisResult
     const rightImg = images[imgIndex++];
 
     // Draw Axis Title
-    const fullAxis = quizAxes.find(a => a.id === axis.axisId);
+    const fullAxis = testAxes.find(a => a.id === axis.axisId);
     const subLabel = getSubTierLabel(leftPct, fullAxis);
     const formattedAxisName = axis.axisName.charAt(0).toUpperCase() + axis.axisName.slice(1).toLowerCase() + ' Axis';
     ctx.fillStyle = '#222222';

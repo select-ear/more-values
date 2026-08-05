@@ -429,6 +429,11 @@ span.weight-300 {
     opacity: 0.5 !important;
 }
 
+.theme-edit-mode .exit-theme-btn,
+.theme-edit-mode .exit-theme-btn * {
+    cursor: pointer !important;
+}
+
 .theme-edit-mode .color-picker-popover,
 .theme-edit-mode .color-picker-popover * {
     pointer-events: auto !important;
@@ -446,8 +451,8 @@ span.weight-300 {
 .btn-sm { padding: 0.5rem 0.85rem; font-size: 0.9rem; }
 .btn-primary { background: #2196f3; color: white; }
 .btn-primary:hover:not(:disabled) { background: #1976d2; }
-.btn-secondary { background: #e0e0e0; color: #333333; }
-.btn-secondary:hover { background: #cccccc; }
+.btn-secondary { background: #cccccc; color: #333333; }
+.btn-secondary:hover { background: #b3b3b3; }
 .btn-success { background: #4caf50; color: white; }
 .btn-success:hover { background: #388e3c; }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -495,4 +500,35 @@ span.weight-300 {
 
 .avatar-container:hover .avatar-overlay {
     opacity: 1;
+}
+/* Image Upload Hover States */
+.image-upload-wrapper {
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 8px;
+  display: block;
+}
+.image-upload-wrapper input[type="file"] {
+  display: none;
+}
+.image-upload-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+.image-upload-wrapper:hover .image-upload-overlay {
+  opacity: 1;
 }

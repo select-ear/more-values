@@ -1,40 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Play, GitFork, Edit3, Trash2, Download, Sparkles, Globe, User } from 'lucide-react';
-import { DEFAULT_8VALUES_QUIZ } from '../utils/default8values';
+import { DEFAULT_8VALUES_TEST } from '../utils/default8values';
+import { TestCard } from './TestCard';
 
-export function ExploreHub({ onSelectQuiz, onEditQuiz, user, authToken, onViewProfile }) {
-  const [quizzes, setQuizzes] = useState([DEFAULT_8VALUES_QUIZ]);
+export function ExploreHub({ onSelectTest, onEditTest, user, authToken, onViewProfile }) {
+  const [tests, setTests] = useState([DEFAULT_8VALUES_TEST]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Attempt to load community published quizzes from backend API
-    const fetchQuizzes = async () => {
+    // Attempt to load community published tests from backend API
+    const fetchTests = async () => {
       setLoading(true);
       try {
-        const res = await fetch('http://localhost:4000/api/quizzes');
+        const res = await fetch('http://localhost:4000/api/tests');
         const data = await res.json();
-        if (data.success && Array.isArray(data.quizzes)) {
-          // Merge API quizzes with default 8values
+        if (data.success && Array.isArray(data.tests)) {
+          // Merge API tests with default 8values
           const merged = [
-            DEFAULT_8VALUES_QUIZ,
-            ...data.quizzes.filter(q => q.id !== '8values-classic')
+            DEFAULT_8VALUES_TEST,
+            ...data.tests.filter(q => q.id !== '8values-classic')
           ];
-          setQuizzes(merged);
+          setTests(merged);
         }
       } catch (err) {
-        // Backend server offline, fallback to preset quizzes
+        // Backend server offline, fallback to preset tests
       } finally {
         setLoading(false);
       }
     };
-    fetchQuizzes();
+    fetchTests();
   }, []);
 
-  const handleDeleteQuiz = async (quizId) => {
+  const handleDeleteTest = async (testId) => {
     if (!confirm('Are you sure you want to delete this test? This cannot be undone.')) return;
     try {
-      const res = await fetch(`http://localhost:4000/api/quizzes/${quizId}`, {
+      const res = await fetch(`http://localhost:4000/api/tests/${testId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authToken}`
@@ -42,16 +43,16 @@ export function ExploreHub({ onSelectQuiz, onEditQuiz, user, authToken, onViewPr
       });
       const data = await res.json();
       if (data.success) {
-        setQuizzes(prev => prev.filter(q => q.id !== quizId));
+        setTests(prev => prev.filter(q => q.id !== testId));
       } else {
-        alert(data.error || 'Failed to delete quiz');
+        alert(data.error || 'Failed to delete test');
       }
     } catch (err) {
       alert('Could not connect to server.');
     }
   };
 
-  const filteredQuizzes = quizzes.filter(q =>
+  const filteredTests = tests.filter(q =>
     q.title?.toLowerCase().includes(search.toLowerCase()) ||
     q.description?.toLowerCase().includes(search.toLowerCase())
   );
@@ -71,112 +72,25 @@ export function ExploreHub({ onSelectQuiz, onEditQuiz, user, authToken, onViewPr
             type="text"
             className="form-input"
             style={{ paddingLeft: '2.5rem' }}
-            placeholder="Search quizzes by title or keyword..."
+            placeholder="Search tests by title or keyword..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Grid of Quizzes */}
+      {/* Grid of Tests */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-        {filteredQuizzes.map((quiz) => (
-          <div key={quiz.id} className="axis-card" style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            overflow: 'hidden', 
-            padding: 0,
-            backgroundColor: 'var(--container-bg, #eeeeee)',
-            borderRadius: '8pt'
-          }}>
-            {/* Thumbnail Banner */}
-            <div style={{ width: '100%', height: '160px', backgroundColor: 'var(--bg-color)' }}>
-              <img 
-                src={quiz.thumbnail || '/placeholder.jpg'} 
-                alt={`${quiz.title} thumbnail`} 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                onError={(e) => { e.target.src = '/placeholder.jpg'; }} // fallback if missing
-              />
-            </div>
-            
-            {/* Card Content */}
-            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between', textAlign: 'left' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {quiz.axes?.length || quiz.axisCount || 4} Axes • {quiz.questions?.length || quiz.questionCount || 0} Questions
-                  </span>
-                </div>
-
-                <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem', color: 'var(--text-main)' }}>
-                  {quiz.title}
-                </h3>
-                
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500, marginRight: '0.25rem' }}>By</span>
-                  {quiz.ownerUsername ? (
-                    <span 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onViewProfile(quiz.ownerUsername);
-                      }}
-                      style={{ fontSize: '0.85rem', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 'bold' }}
-                      onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
-                      onMouseOut={(e) => e.target.style.textDecoration = 'none'}
-                    >
-                      {quiz.ownerUsername}
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                      {quiz.id === '8values-classic' ? '8values Team' : (quiz.author || 'Anonymous')}
-                    </span>
-                  )}
-                </div>
-
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 1.25rem 0', lineHeight: 1.5 }}>
-                  {quiz.description}
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-                <button
-                  className="btn btn-primary btn-sm"
-                  style={{ flex: 1 }}
-                  onClick={() => onSelectQuiz(quiz)}
-                >
-                  <Play size={14} /> Do Test
-                </button>
-
-                {user && quiz.ownerId === user.id && quiz.id !== '8values-classic' ? (
-                  <>
-                    <button
-                      className="btn btn-sm btn-outline"
-                      onClick={() => onEditQuiz(quiz)}
-                      title="Edit this Quiz in Creator"
-                    >
-                      <Edit3 size={14} /> Edit
-                    </button>
-                    <button
-                      className="btn btn-sm"
-                      style={{ backgroundColor: '#d32f2f', color: 'white', border: 'none' }}
-                      onClick={() => handleDeleteQuiz(quiz.id)}
-                      title="Delete this Quiz"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    className="btn btn-sm btn-fork"
-                    onClick={() => onEditQuiz(quiz)}
-                    title="Fork & Edit this Quiz in Creator"
-                  >
-                    <GitFork size={14} /> Fork
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+        {filteredTests.map((test) => (
+          <TestCard 
+            key={test.id} 
+            test={test} 
+            isOwner={user && test.ownerId === user.id} 
+            onSelectTest={onSelectTest} 
+            onEditTest={onEditTest} 
+            onViewProfile={onViewProfile} 
+            onDeleteTest={(user && test.ownerId === user.id && test.id !== '8values-classic') ? handleDeleteTest : null}
+          />
         ))}
       </div>
     </div>

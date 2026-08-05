@@ -1,40 +1,40 @@
 import LZString from 'lz-string';
 
 /**
- * Encodes a quiz object into a compressed URL hash payload.
+ * Encodes a test object into a compressed URL hash payload.
  */
-export function encodeQuizToUrlHash(quiz) {
+export function encodeTestToUrlHash(test) {
   try {
-    const jsonStr = JSON.stringify(quiz);
+    const jsonStr = JSON.stringify(test);
     return LZString.compressToEncodedURIComponent(jsonStr);
   } catch (err) {
-    console.error("Error compressing quiz to hash:", err);
+    console.error("Error compressing test to hash:", err);
     return null;
   }
 }
 
 /**
- * Decodes a quiz object from a compressed URL hash payload.
+ * Decodes a test object from a compressed URL hash payload.
  */
-export function decodeQuizFromUrlHash(hashString) {
+export function decodeTestFromUrlHash(hashString) {
   try {
     if (!hashString) return null;
     const cleanHash = hashString.startsWith('#') ? hashString.substring(1) : hashString;
-    const param = new URLSearchParams(cleanHash).get('quiz') || cleanHash;
+    const param = new URLSearchParams(cleanHash).get('test') || cleanHash;
     const decompressed = LZString.decompressFromEncodedURIComponent(param);
     if (!decompressed) return null;
     return JSON.parse(decompressed);
   } catch (err) {
-    console.error("Error decompressing quiz from hash:", err);
+    console.error("Error decompressing test from hash:", err);
     return null;
   }
 }
 
 /**
- * Downloads a quiz object as a local `.8val.json` file.
+ * Downloads a test object as a local `.8val.json` file.
  */
-export function downloadQuizJson(quiz, filename = `${quiz.id || 'custom-quiz'}.8val.json`) {
-  const jsonString = JSON.stringify(quiz, null, 2);
+export function downloadTestJson(test, filename = `${test.id || 'custom-test'}.8val.json`) {
+  const jsonString = JSON.stringify(test, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
   const href = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -47,9 +47,9 @@ export function downloadQuizJson(quiz, filename = `${quiz.id || 'custom-quiz'}.8
 }
 
 /**
- * Reads a uploaded JSON file into a JavaScript Quiz object.
+ * Reads a uploaded JSON file into a JavaScript Test object.
  */
-export function parseQuizJsonFile(file) {
+export function parseTestJsonFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {

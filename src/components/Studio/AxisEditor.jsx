@@ -21,7 +21,7 @@ export function AxisEditor({ axes, setAxes }) {
 
   const handleRemoveAxis = (index) => {
     if (axes.length <= 1) {
-      alert("Quizzes must have at least 1 axis!");
+      alert("Tests must have at least 1 axis!");
       return;
     }
     const updated = axes.filter((_, i) => i !== index);
@@ -113,11 +113,6 @@ export function AxisEditor({ axes, setAxes }) {
             Define the opposing spectrums for your test. Set vector SVG images and colors for each value.
           </p>
         </div>
-
-        <button className="menu-btn" onClick={handleAddAxis}>
-          <Plus size={16} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-          Add Axis
-        </button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -167,24 +162,23 @@ export function AxisEditor({ axes, setAxes }) {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Upload Custom Image</label>
+                <label className="image-upload-wrapper" style={{ display: 'block', width: '100px', height: '100px', margin: '1rem auto 0' }}>
+                  <div style={{ width: '100%', height: '100%' }}>
+                    <ValueIcon
+                      name={axis.left.name}
+                      color={axis.left.color}
+                      iconSrc={axis.left.icon || '/raw_icons/equality.svg'}
+                    />
+                  </div>
+                  <div className="image-upload-overlay" style={{ fontSize: '0.75rem', textAlign: 'center' }}>
+                    Upload Icon
+                  </div>
                   <input
                     type="file"
                     accept=".svg,.png,.jpeg,.jpg"
-                    className="form-input"
                     onChange={(e) => handleCustomImageUpload(idx, 'left', e.target.files?.[0])}
                   />
-                </div>
-
-                {/* Preview */}
-                <div style={{ textAlign: 'center', width: '80px', margin: '1rem auto 0' }}>
-                  <ValueIcon
-                    name={axis.left.name}
-                    color={axis.left.color}
-                    iconSrc={axis.left.icon || '/raw_icons/equality.svg'}
-                  />
-                </div>
+                </label>
               </div>
 
               {/* Right Value */}
@@ -212,24 +206,23 @@ export function AxisEditor({ axes, setAxes }) {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Upload Custom Image</label>
+                <label className="image-upload-wrapper" style={{ display: 'block', width: '100px', height: '100px', margin: '1rem auto 0' }}>
+                  <div style={{ width: '100%', height: '100%' }}>
+                    <ValueIcon
+                      name={axis.right.name}
+                      color={axis.right.color}
+                      iconSrc={axis.right.icon || '/raw_icons/markets.svg'}
+                    />
+                  </div>
+                  <div className="image-upload-overlay" style={{ fontSize: '0.75rem', textAlign: 'center' }}>
+                    Upload Icon
+                  </div>
                   <input
                     type="file"
                     accept=".svg,.png,.jpeg,.jpg"
-                    className="form-input"
                     onChange={(e) => handleCustomImageUpload(idx, 'right', e.target.files?.[0])}
                   />
-                </div>
-
-                {/* Preview */}
-                <div style={{ textAlign: 'center', width: '80px', margin: '1rem auto 0' }}>
-                  <ValueIcon
-                    name={axis.right.name}
-                    color={axis.right.color}
-                    iconSrc={axis.right.icon || '/raw_icons/markets.svg'}
-                  />
-                </div>
+                </label>
               </div>
             </div>
 
@@ -289,6 +282,10 @@ export function AxisEditor({ axes, setAxes }) {
           </div>
         ))}
       </div>
+
+      <button className="btn btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={handleAddAxis}>
+        <Plus size={20} style={{ marginRight: '0.5rem' }} /> Add Another Axis
+      </button>
     </div>
   );
 }

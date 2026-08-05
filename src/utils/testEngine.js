@@ -1,20 +1,20 @@
 /**
- * Calculates quiz results based on user answers and quiz definition.
+ * Calculates test results based on user answers and test definition.
  * 
  * Answers map: { [questionId]: 1.0 | 0.5 | 0 | -0.5 | -1.0 }
  */
-export function calculateQuizResults(quiz, userAnswers) {
+export function calculateTestResults(test, userAnswers) {
   const scores = {};
   const maxScores = {};
 
-  // Initialize scores for all axes defined in the quiz
-  quiz.axes.forEach(axis => {
+  // Initialize scores for all axes defined in the test
+  test.axes.forEach(axis => {
     scores[axis.id] = 0;
     maxScores[axis.id] = 0;
   });
 
   // Accumulate scores and potential max scores
-  quiz.questions.forEach(question => {
+  test.questions.forEach(question => {
     const answerVal = userAnswers[question.id] ?? 0;
     if (question.effects) {
       Object.entries(question.effects).forEach(([axisId, weight]) => {
@@ -27,7 +27,7 @@ export function calculateQuizResults(quiz, userAnswers) {
   });
 
   // Calculate percentage breakdown for each axis (Left % vs Right %)
-  const axisResults = quiz.axes.map(axis => {
+  const axisResults = test.axes.map(axis => {
     const max = maxScores[axis.id] || 1;
     const raw = scores[axis.id];
 
@@ -51,7 +51,7 @@ export function calculateQuizResults(quiz, userAnswers) {
   });
 
   // Determine matched ideology
-  const matchedIdeology = findMatchedIdeology(quiz.ideologies || [], axisResults);
+  const matchedIdeology = findMatchedIdeology(test.ideologies || [], axisResults);
 
   return {
     axisResults,

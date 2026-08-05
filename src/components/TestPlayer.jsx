@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { calculateQuizResults } from '../utils/quizEngine';
+import { calculateTestResults } from '../utils/testEngine';
 import { HexColorPicker, HexColorInput } from 'react-colorful';
 import { ValueIcon } from './ValueIcon';
 
-function InnerQuizPlayer({ quiz, onComplete, onEditInStudio }) {
+function InnerTestPlayer({ test, onComplete, onEditInStudio }) {
   // view state: 'home' | 'instructions' | 'playing'
   const [viewState, setViewState] = useState('home');
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState({});
 
-  if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+  if (!test || !test.questions || test.questions.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '3rem' }}>
-        <h2>No questions found in this quiz!</h2>
+        <h2>No questions found in this test!</h2>
         <p style={{ margin: '1rem 0' }}>
           Open the Creator to add questions to your test.
         </p>
@@ -36,20 +36,20 @@ function InnerQuizPlayer({ quiz, onComplete, onEditInStudio }) {
           </svg>
         </a>
 
-        <h1>{quiz.title}</h1>
+        <h1>{test.title}</h1>
         <hr />
 
         <div className="center">
           <div className="quadcolumn-headers">
-            {quiz.axes.map((axis) => (
+            {test.axes.map((axis) => (
               <div key={axis.id} className="axis_name quadcolumn">
-                {axis.name}
+                <span className="axis-text">{axis.name}</span>
               </div>
             ))}
           </div>
 
           <div className="quadcolumn-row">
-            {quiz.axes.map((axis) => (
+            {test.axes.map((axis) => (
               <a href="#anchor" key={`${axis.id}-left`} className="quadcolumn clickable">
                 <ValueIcon
                   name={axis.left.name}
@@ -62,7 +62,7 @@ function InnerQuizPlayer({ quiz, onComplete, onEditInStudio }) {
           </div>
 
           <div className="quadcolumn-row">
-            {quiz.axes.map((axis) => (
+            {test.axes.map((axis) => (
               <a href="#anchor" key={`${axis.id}-right`} className="quadcolumn clickable">
                 <ValueIcon
                   name={axis.right.name}
@@ -83,17 +83,17 @@ function InnerQuizPlayer({ quiz, onComplete, onEditInStudio }) {
 
         <hr />
 
-        <h2>What is {quiz.title}?</h2>
+        <h2>What is {test.title}?</h2>
         <p>
-          {quiz.description} You will be presented with a statement, and then you will answer with your opinion on the statement, from <b>Strongly Agree</b> to <b>Strongly Disagree</b>, with each answer slightly affecting your scores. At the end of the quiz, your answers will be compared to the maximum possible for each value. Answer honestly!<br /><br />
-          There are <b><u><span>{quiz.questions.length}</span></u></b> questions in the test.
+          {test.description} You will be presented with a statement, and then you will answer with your opinion on the statement, from <b>Strongly Agree</b> to <b>Strongly Disagree</b>, with each answer slightly affecting your scores. At the end of the test, your answers will be compared to the maximum possible for each value. Answer honestly!<br /><br />
+          There are <b><u><span>{test.questions.length}</span></u></b> questions in the test.
         </p>
 
         <h2><a id="anchor" style={{ color: 'inherit', textDecoration: 'none' }}>What are the values?</a></h2>
         <p>There are independent axes, and each has two opposing values assigned to them:</p>
 
         <div className="explanation_bg">
-          {quiz.axes.map((axis) => (
+          {test.axes.map((axis) => (
             <div key={axis.id} className="spacer">
               <div className="explanation_blurb_left">
                 <p className="value"><b style={{ color: axis.left.color }}>{axis.left.name.toUpperCase()}</b></p>
@@ -119,7 +119,7 @@ function InnerQuizPlayer({ quiz, onComplete, onEditInStudio }) {
 
         <h2 style={{ marginTop: '17pt' }}>What's the "Closest Match" mean at the bottom of the results?</h2>
         <p>
-          In addition to matching you to the values, the quiz also attempts to match you to a political or philosophical ideology. This is a work in progress, so don't take it too seriously.
+          In addition to matching you to the values, the test also attempts to match you to a political or philosophical ideology. This is a work in progress, so don't take it too seriously.
         </p>
 
         <h2>I don't like my scores!</h2>
@@ -135,7 +135,7 @@ function InnerQuizPlayer({ quiz, onComplete, onEditInStudio }) {
   if (viewState === 'instructions') {
     return (
       <div>
-        <h1>{quiz.title}</h1>
+        <h1>{test.title}</h1>
         <hr />
         <h2 style={{ textAlign: 'center' }}>Instructions</h2>
         <p className="question">
@@ -151,9 +151,9 @@ function InnerQuizPlayer({ quiz, onComplete, onEditInStudio }) {
     );
   }
 
-  // 3. Quiz Player Screen - 100% 8values quiz.html structure
-  const currentQuestion = quiz.questions[currentIdx];
-  const totalQuestions = quiz.questions.length;
+  // 3. Test Player Screen - 100% 8values test.html structure
+  const currentQuestion = test.questions[currentIdx];
+  const totalQuestions = test.questions.length;
 
   const handleAnswer = (multiplier) => {
     const updatedAnswers = { ...answers, [currentQuestion.id]: multiplier };
@@ -162,7 +162,7 @@ function InnerQuizPlayer({ quiz, onComplete, onEditInStudio }) {
     if (currentIdx + 1 < totalQuestions) {
       setCurrentIdx(currentIdx + 1);
     } else {
-      const results = calculateQuizResults(quiz, updatedAnswers);
+      const results = calculateTestResults(test, updatedAnswers);
       onComplete(results);
     }
   };
@@ -177,7 +177,7 @@ function InnerQuizPlayer({ quiz, onComplete, onEditInStudio }) {
 
   return (
     <div>
-      <h1>{quiz.title}</h1>
+      <h1>{test.title}</h1>
       <hr />
       <h2 style={{ textAlign: 'center' }}>
         Question {currentIdx + 1} of {totalQuestions}
@@ -203,8 +203,8 @@ function InnerQuizPlayer({ quiz, onComplete, onEditInStudio }) {
   );
 }
 
-export function QuizPlayer(props) {
-  const { isThemeEditMode, onUpdateTheme, quiz } = props;
+export function TestPlayer(props) {
+  const { isThemeEditMode, onUpdateTheme, test } = props;
   const [activePicker, setActivePicker] = useState(null);
   const [pickerPos, setPickerPos] = useState({ x: 0, y: 0 });
 
@@ -226,7 +226,7 @@ export function QuizPlayer(props) {
       if (el.tagName === 'HTML') targetKey = 'htmlBg';
       else if (el.tagName === 'BODY') targetKey = 'border';
       else if (el.tagName === 'HR') targetKey = 'lines';
-      else if (el.closest('h1, h2, .question, .axis_name')) targetKey = 'headings';
+      else if (el.closest('h1, h2, .question, p.axis_name, .axis-text')) targetKey = 'headings';
       else if (el.closest('p')) targetKey = 'text';
       else if (el.closest('.center')) targetKey = 'centerBg';
       else if (el.closest('.explanation_bg, .quadcolumn-headers, .quadcolumn-row, .top-nav')) targetKey = 'containerBg';
@@ -287,13 +287,13 @@ export function QuizPlayer(props) {
             <option value="resultsBarBorder">Results Bar Border</option>
           </select>
           <HexColorPicker 
-            color={quiz.theme?.[activePicker] || '#cccccc'} 
+            color={test.theme?.[activePicker] || '#cccccc'} 
             onChange={(color) => onUpdateTheme?.(activePicker, color)} 
           />
           <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <span style={{ fontSize: '0.8rem', color: '#666', fontWeight: 'bold' }}>HEX:</span>
             <HexColorInput 
-              color={quiz.theme?.[activePicker] || '#cccccc'} 
+              color={test.theme?.[activePicker] || '#cccccc'} 
               onChange={(color) => onUpdateTheme?.(activePicker, color)} 
               prefixed
               style={{ width: '100%', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', fontFamily: 'monospace' }}
@@ -302,7 +302,7 @@ export function QuizPlayer(props) {
         </div>
       )}
 
-      <InnerQuizPlayer {...props} />
+      <InnerTestPlayer {...props} />
     </div>
   );
 }

@@ -1,44 +1,89 @@
 import React, { useState } from 'react';
-import { Download, Upload, Play, Globe, RotateCcw, Save, Check, Palette, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { Download, Upload, Play, Globe, RotateCcw, Save, Check, Palette, Image as ImageIcon, Trash2, Undo2, Redo2 } from 'lucide-react';
 import { AxisEditor } from './AxisEditor';
 import { QuestionEditor } from './QuestionEditor';
 import { IdeologyEditor } from './IdeologyEditor';
 
-export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThemeEditMode, setIsThemeEditMode, user }) {
+export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, setIsThemeEditMode, user, undo, redo, canUndo, canRedo }) {
   const [activeTab, setActiveTab] = useState('axes');
   const [publishing, setPublishing] = useState(false);
   const [publishedMsg, setPublishedMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
 
+  // References for unmount auto-save
+  const testRef = React.useRef(test);
+  const userRef = React.useRef(user);
+  const onPublishRef = React.useRef(onPublish);
+
+  React.useEffect(() => {
+    testRef.current = test;
+    userRef.current = user;
+    onPublishRef.current = onPublish;
+  }, [test, user, onPublish]);
+
+  React.useEffect(() => {
+    return () => {
+      const q = testRef.current;
+      const u = userRef.current;
+      const pub = onPublishRef.current;
+      if (q && pub) {
+        // Only auto-save if they are logged in, and they either own the test or it's new
+        if (u && (!q.ownerId || q.ownerId === u.id)) {
+          const isDraft = q.isDraft !== 0;
+          pub(q, isDraft).catch(() => {});
+        }
+      }
+    };
+  }, []);
+
+  // Keyboard shortcuts for Undo/Redo
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          if (canRedo) redo();
+        } else {
+          if (canUndo) undo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        if (canRedo) redo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo, canUndo, canRedo]);
+
   const handleMetadataChange = (field, value) => {
-    setQuiz({ ...quiz, [field]: value });
+    setTest({ ...test, [field]: value });
   };
 
   const handleAxesChange = (axes) => {
-    setQuiz({ ...quiz, axes });
+    setTest({ ...test, axes });
   };
 
   const handleQuestionsChange = (questions) => {
-    setQuiz({ ...quiz, questions });
+    setTest({ ...test, questions });
   };
 
   const handleIdeologiesChange = (ideologies) => {
-    setQuiz({ ...quiz, ideologies });
+    setTest({ ...test, ideologies });
   };
 
-  const handlePublishClick = async () => {
+  const handlePublishClick = async (isDraft) => {
     setPublishing(true);
     setPublishedMsg(null);
     setErrorMsg(null);
     try {
-      const res = await onPublish(quiz);
+      const res = await onPublish(test, isDraft);
       if (res && res.success) {
-        const isUpdate = quiz.ownerId && user && quiz.ownerId === user.id;
-        const msg = isUpdate ? 'Changes saved successfully!' : `Quiz published! Share URL: ${window.location.origin}/#quiz=${res.id}`;
+        const isUpdate = test.ownerId && user && test.ownerId === user.id;
+        let msg = isDraft ? 'Draft saved successfully!' : (isUpdate ? 'Changes saved and published!' : `Test published! Share URL: ${window.location.origin}/#test=${res.id}`);
         setPublishedMsg(msg);
         
-        // Update local quiz state with the new ID and owner so subsequent clicks act as "Save"
-        setQuiz({ ...quiz, id: res.id, ownerId: user?.id || null });
+        // Update local test state with the new ID and owner so subsequent clicks act as "Save"
+        setTest({ ...test, id: res.id, ownerId: user?.id || null, isDraft: isDraft ? 1 : 0 });
       } else {
         setErrorMsg(res?.error || 'Failed to save changes.');
       }
@@ -96,23 +141,32 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <button className="btn btn-secondary btn-sm" onClick={onSaveFile}>
-            <Download size={16} /> Save .8val File
+          <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.05)' }}>
+            <button 
+              style={{ border: 'none', background: 'transparent', padding: '0.5rem 0.75rem', color: canUndo ? 'var(--text-main)' : 'var(--text-muted)', cursor: canUndo ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center' }} 
+              onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)"
+            >
+              <Undo2 size={16} />
+            </button>
+            <div style={{ width: '1px', background: 'var(--border-color)' }} />
+            <button 
+              style={{ border: 'none', background: 'transparent', padding: '0.5rem 0.75rem', color: canRedo ? 'var(--text-main)' : 'var(--text-muted)', cursor: canRedo ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center' }} 
+              onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)"
+            >
+              <Redo2 size={16} />
+            </button>
+          </div>
+
+          <button className="btn btn-secondary btn-sm" onClick={() => handlePublishClick(true)} disabled={publishing}>
+            <Save size={16} /> {publishing ? 'Saving...' : 'Save Draft'}
           </button>
           
-          <button className="btn btn-primary btn-sm" onClick={handlePublishClick} disabled={publishing}>
-            <Globe size={16} /> {publishing ? 'Publishing...' : (quiz.ownerId && (!user || quiz.ownerId !== user.id) ? 'Fork & Publish' : (quiz.ownerId && user && quiz.ownerId === user.id ? 'Save Changes' : 'Publish to Platform'))}
+          <button className="btn btn-success btn-sm" onClick={onPlayTest}>
+            <Play size={16} /> Demo Test
           </button>
 
-          <button className="btn btn-secondary btn-sm" onClick={() => {
-            setIsThemeEditMode(true);
-            onPlayQuiz();
-          }}>
-            <Palette size={16} /> Edit Theme Colors
-          </button>
-
-          <button className="btn btn-success btn-sm" onClick={onPlayQuiz}>
-            <Play size={16} /> Demo the Test
+          <button className="btn btn-primary btn-sm" onClick={() => handlePublishClick(false)} disabled={publishing}>
+            <Globe size={16} /> {publishing ? 'Publishing...' : (test.ownerId && (!user || test.ownerId !== user.id) ? 'Fork & Publish' : 'Publish')}
           </button>
         </div>
       </div>
@@ -141,7 +195,7 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
             <input
               type="text"
               className="form-input"
-              value={quiz.title || ''}
+              value={test.title || ''}
               onChange={(e) => handleMetadataChange('title', e.target.value)}
               placeholder="e.g. 8values Political Spectrum"
             />
@@ -152,7 +206,7 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
             <input
               type="text"
               className="form-input"
-              value={quiz.author || ''}
+              value={test.author || ''}
               onChange={(e) => handleMetadataChange('author', e.target.value)}
               placeholder="Your name or organization"
             />
@@ -164,7 +218,7 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
           <textarea
             rows={2}
             className="form-textarea"
-            value={quiz.description || ''}
+            value={test.description || ''}
             onChange={(e) => handleMetadataChange('description', e.target.value)}
             placeholder="Brief explanation of what this test measures..."
           />
@@ -173,74 +227,102 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
 
       {/* Branding & Assets Card */}
       <div className="axis-card" style={{ textAlign: 'left', marginBottom: '2rem', padding: '1.5rem' }}>
-        <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {/* <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <ImageIcon size={20} style={{ color: '#a78bfa' }} />
           Branding & Assets
-        </h3>
+        </h3> */}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
           {/* Thumbnail Upload */}
           <div>
-            <label className="form-label">Quiz Thumbnail (Cover Image)</label>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-              Displayed on the search page. (Recommended ratio 16:9)
-            </p>
+            <div style={{ marginBottom: '0.75rem' }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>Test Thumbnail (Cover Image)</label>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Displayed on the search page. (Recommended ratio 16:9)
+              </p>
+            </div>
             
-            {quiz.thumbnail ? (
-              <div style={{ position: 'relative', marginBottom: '1rem' }}>
-                <img src={quiz.thumbnail} alt="Thumbnail preview" style={{ width: '100%', borderRadius: '8px', border: '1px solid var(--border-color)', objectFit: 'cover', aspectRatio: '16/9' }} />
-                <button 
-                  className="btn btn-danger btn-sm" 
-                  style={{ position: 'absolute', top: '8px', right: '8px', padding: '0.25rem 0.5rem' }}
-                  onClick={() => handleMetadataChange('thumbnail', null)}
-                >
-                  <Trash2 size={14} /> Remove
-                </button>
+            <label className="image-upload-wrapper" style={{ display: 'block', marginBottom: '1rem', border: test.thumbnail ? '1px solid var(--border-color)' : '2px dashed var(--border-color)', background: 'rgba(0,0,0,0.05)', aspectRatio: '16/9' }}>
+              {test.thumbnail ? (
+                <img src={test.thumbnail} alt="Thumbnail preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ImageIcon size={32} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+                </div>
+              )}
+              <div className="image-upload-overlay">
+                <Upload size={24} style={{ marginBottom: '0.5rem' }} />
+                {test.thumbnail ? 'Change Cover Image' : 'Upload Cover Image'}
               </div>
-            ) : (
-              <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: '8px', border: '2px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', background: 'rgba(0,0,0,0.2)' }}>
-                <ImageIcon size={32} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
-              </div>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={(e) => handleImageUpload(e, 'thumbnail', 600)} 
+              />
+            </label>
+
+            {test.thumbnail && (
+              <button 
+                className="btn btn-danger btn-sm" 
+                style={{ width: '100%', padding: '0.5rem' }}
+                onClick={() => handleMetadataChange('thumbnail', null)}
+              >
+                <Trash2 size={16} /> Remove Cover Image
+              </button>
             )}
-            
-            <input 
-              type="file" 
-              accept="image/*" 
-              className="form-input" 
-              onChange={(e) => handleImageUpload(e, 'thumbnail', 600)} 
-            />
           </div>
 
           {/* Favicon Upload */}
           <div>
-            <label className="form-label">Favicon (Small Icon)</label>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-              Displayed in the browser tab and small badges. (Square)
-            </p>
+            <div style={{ marginBottom: '0.75rem' }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>Favicon (Small Icon)</label>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Displayed in the browser tab and small badges. (Square)
+              </p>
+            </div>
 
-            {quiz.favicon ? (
-              <div style={{ position: 'relative', marginBottom: '1rem', width: '64px' }}>
-                <img src={quiz.favicon} alt="Favicon preview" style={{ width: '64px', height: '64px', borderRadius: '8px', border: '1px solid var(--border-color)', objectFit: 'cover' }} />
-                <button 
-                  className="btn btn-danger btn-sm" 
-                  style={{ position: 'absolute', top: '-8px', right: '-8px', padding: '0.25rem', borderRadius: '50%' }}
-                  onClick={() => handleMetadataChange('favicon', null)}
-                >
-                  <Trash2 size={12} />
-                </button>
+            <label className="image-upload-wrapper" style={{ display: 'block', marginBottom: '1rem', width: '80px', height: '80px', border: test.favicon ? '1px solid var(--border-color)' : '2px dashed var(--border-color)', background: 'rgba(0,0,0,0.05)' }}>
+              {test.favicon ? (
+                <img src={test.favicon} alt="Favicon preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ImageIcon size={20} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+                </div>
+              )}
+              <div className="image-upload-overlay" style={{ fontSize: '0.75rem' }}>
+                <Upload size={16} style={{ marginBottom: '0.25rem' }} />
+                Upload
               </div>
-            ) : (
-              <div style={{ width: '64px', height: '64px', borderRadius: '8px', border: '2px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', background: 'rgba(0,0,0,0.2)' }}>
-                <ImageIcon size={20} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
-              </div>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={(e) => handleImageUpload(e, 'favicon', 128)} 
+              />
+            </label>
+
+            {test.favicon && (
+              <button 
+                className="btn btn-danger btn-sm" 
+                style={{ width: '80px', padding: '0.25rem' }}
+                onClick={() => handleMetadataChange('favicon', null)}
+              >
+                <Trash2 size={14} /> Remove
+              </button>
             )}
+          </div>
 
-            <input 
-              type="file" 
-              accept="image/*" 
-              className="form-input" 
-              onChange={(e) => handleImageUpload(e, 'favicon', 128)} 
-            />
+          {/* Theme Colors */}
+          <div>
+            <label className="form-label">Custom Theme Colours</label>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+              Launch the live colour picker to customize the appearance of your test.
+            </p>
+            <button className="btn btn-secondary" style={{ width: '100%', padding: '0.75rem' }} onClick={() => {
+              setIsThemeEditMode(true);
+              onPlayTest();
+            }}>
+              <Palette size={16} /> Edit Theme Colors
+            </button>
           </div>
         </div>
       </div>
@@ -251,35 +333,35 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
           className={`studio-tab ${activeTab === 'axes' ? 'active' : ''}`}
           onClick={() => setActiveTab('axes')}
         >
-          1. Axes & Values ({quiz.axes?.length || 0})
+          1. Axes & Values ({test.axes?.length || 0})
         </button>
 
         <button
           className={`studio-tab ${activeTab === 'questions' ? 'active' : ''}`}
           onClick={() => setActiveTab('questions')}
         >
-          2. Questions & Weights ({quiz.questions?.length || 0})
+          2. Questions & Weights ({test.questions?.length || 0})
         </button>
 
         <button
           className={`studio-tab ${activeTab === 'ideologies' ? 'active' : ''}`}
           onClick={() => setActiveTab('ideologies')}
         >
-          3. Ideologies ({quiz.ideologies?.length || 0})
+          3. Ideologies ({test.ideologies?.length || 0})
         </button>
       </div>
 
       {/* Tab Content */}
       {activeTab === 'axes' && (
-        <AxisEditor axes={quiz.axes || []} setAxes={handleAxesChange} />
+        <AxisEditor axes={test.axes || []} setAxes={handleAxesChange} />
       )}
 
       {activeTab === 'questions' && (
-        <QuestionEditor questions={quiz.questions || []} setQuestions={handleQuestionsChange} axes={quiz.axes || []} />
+        <QuestionEditor questions={test.questions || []} setQuestions={handleQuestionsChange} axes={test.axes || []} />
       )}
 
       {activeTab === 'ideologies' && (
-        <IdeologyEditor ideologies={quiz.ideologies || []} setIdeologies={handleIdeologiesChange} axes={quiz.axes || []} />
+        <IdeologyEditor ideologies={test.ideologies || []} setIdeologies={handleIdeologiesChange} axes={test.axes || []} />
       )}
     </div>
   );

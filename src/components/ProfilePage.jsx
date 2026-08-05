@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { User, Edit3, Check, Image as ImageIcon, Play, GitFork, ExternalLink, Link as LinkIcon, Save, X } from 'lucide-react';
-import { DEFAULT_8VALUES_QUIZ } from '../utils/default8values';
+import { DEFAULT_8VALUES_TEST } from '../utils/default8values';
+import { TestCard } from './TestCard';
 
-export function ProfilePage({ username, user, authToken, onSelectQuiz, onEditQuiz, onGoBack }) {
+export function ProfilePage({ username, user, authToken, onSelectTest, onEditTest, onGoBack }) {
   const [profile, setProfile] = useState(null);
-  const [quizzes, setQuizzes] = useState([]);
+  const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Edit mode state
@@ -16,14 +17,21 @@ export function ProfilePage({ username, user, authToken, onSelectQuiz, onEditQui
   
   const isOwner = user && user.username.toLowerCase() === username.toLowerCase();
 
+  const publishedTests = tests.filter(q => q.isDraft !== 1);
+  const draftTests = tests.filter(q => q.isDraft === 1);
+
   const loadProfile = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/api/profile/${username}`);
+      const res = await fetch(`http://localhost:4000/api/profile/${username}`, {
+        headers: authToken ? {
+          'Authorization': `Bearer ${authToken}`
+        } : {}
+      });
       const data = await res.json();
       if (data.success) {
         setProfile(data.profile);
-        setQuizzes(data.quizzes);
+        setTests(data.tests);
         setEditBio(data.profile.bio || '');
         setEditSocial(data.profile.socialMedia || '');
         setEditPic(data.profile.profilePicture || '');
@@ -208,45 +216,45 @@ export function ProfilePage({ username, user, authToken, onSelectQuiz, onEditQui
         <h2 style={{ fontSize: '1.75rem', margin: 0 }}>Tests by {profile.username}</h2>
       </div>
       
-      {quizzes.length === 0 ? (
+      {publishedTests.length === 0 && draftTests.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem', background: 'var(--container-bg)', borderRadius: '12px', color: 'var(--text-muted)' }}>
           This user hasn't published any tests yet.
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-          {quizzes.map((quiz) => (
-            <div key={quiz.id} className="axis-card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0, backgroundColor: 'var(--container-bg)', borderRadius: '8pt' }}>
-              <div style={{ width: '100%', height: '160px', backgroundColor: 'var(--bg-color)' }}>
-                <img src={quiz.thumbnail || '/placeholder.jpg'} alt={`${quiz.title} thumbnail`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.src = '/placeholder.jpg'; }} />
-              </div>
-              <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between', textAlign: 'left' }}>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {quiz.axes?.length || quiz.axisCount || 4} Axes • {quiz.questions?.length || quiz.questionCount || 0} Questions
-                    </span>
-                  </div>
-                  <h3 style={{ fontSize: '1.25rem', marginBottom: '0.75rem', color: 'var(--text-main)' }}>{quiz.title}</h3>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 1.25rem 0', lineHeight: 1.5 }}>{quiz.description}</p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-                  <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => onSelectQuiz(quiz)}>
-                    <Play size={14} /> Do Test
-                  </button>
-                  {isOwner ? (
-                    <button className="btn btn-sm btn-outline" onClick={() => onEditQuiz(quiz)} title="Edit this Quiz in Creator">
-                      <Edit3 size={14} /> Edit
-                    </button>
-                  ) : (
-                    <button className="btn btn-sm btn-fork" onClick={() => onEditQuiz(quiz)} title="Fork & Edit this Quiz in Creator">
-                      <GitFork size={14} /> Fork
-                    </button>
-                  )}
-                </div>
+        <>
+          {publishedTests.length > 0 && (
+            <div style={{ marginBottom: '3rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                {publishedTests.map((test) => (
+                  <TestCard 
+                    key={test.id} 
+                    test={test} 
+                    isOwner={isOwner} 
+                    onSelectTest={onSelectTest} 
+                    onEditTest={onEditTest} 
+                  />
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+          )}
+
+          {isOwner && draftTests.length > 0 && (
+            <div>
+              <h3 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem 0', color: 'var(--text-main)' }}>Your Drafts</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                {draftTests.map((test) => (
+                  <TestCard 
+                    key={test.id} 
+                    test={test} 
+                    isOwner={isOwner} 
+                    onSelectTest={onSelectTest} 
+                    onEditTest={onEditTest} 
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -34,11 +34,6 @@ export function IdeologyEditor({ ideologies = [], setIdeologies, axes }) {
             Define custom titles and descriptions displayed on the final results card when user scores match specific ranges.
           </p>
         </div>
-
-        <button className="btn btn-primary btn-sm" onClick={handleAddIdeology}>
-          <Plus size={16} />
-          Add Ideology
-        </button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -151,6 +146,10 @@ export function IdeologyEditor({ ideologies = [], setIdeologies, axes }) {
           </div>
         ))}
       </div>
+
+      <button className="btn btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={handleAddIdeology}>
+        <Plus size={20} style={{ marginRight: '0.5rem' }} /> Add Another Ideology
+      </button>
     </div>
   );
 }

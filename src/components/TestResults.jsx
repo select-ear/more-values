@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { exportResultsCanvas } from '../utils/canvasExporter';
-import { encodeQuizToUrlHash } from '../utils/compressor';
+import { encodeTestToUrlHash } from '../utils/compressor';
 import { ValueIcon } from './ValueIcon';
 
 export function getSubTierLabel(val, fullAxis) {
@@ -16,26 +16,26 @@ export function getSubTierLabel(val, fullAxis) {
   return sortedTiers[sortedTiers.length - 1].name;
 }
 
-export function QuizResults({ quiz, results, onRetake, onEditInStudio }) {
+export function TestResults({ test, results, onRetake, onEditInStudio }) {
   const [copied, setCopied] = useState(false);
   const [bannerSrc, setBannerSrc] = useState(null);
 
   useEffect(() => {
 
-    if (quiz && results) {
-      exportResultsCanvas(quiz.title, results.matchedIdeology, results.axisResults, quiz.axes)
+    if (test && results) {
+      exportResultsCanvas(test.title, results.matchedIdeology, results.axisResults, test.axes)
         .then(dataUrl => setBannerSrc(dataUrl))
         .catch(err => console.error("Canvas banner generation failed:", err));
     }
-  }, [quiz, results]);
+  }, [test, results]);
 
   if (!results) return null;
 
   const { axisResults, matchedIdeology } = results;
 
   const handleCopyLink = () => {
-    const compressed = encodeQuizToUrlHash(quiz);
-    const fullUrl = `${window.location.origin}${window.location.pathname}#quiz=${compressed}`;
+    const compressed = encodeTestToUrlHash(test);
+    const fullUrl = `${window.location.origin}${window.location.pathname}#test=${compressed}`;
     navigator.clipboard.writeText(fullUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -43,13 +43,13 @@ export function QuizResults({ quiz, results, onRetake, onEditInStudio }) {
 
   return (
     <div>
-      <h1>{quiz.title}</h1>
+      <h1>{test.title}</h1>
       <hr />
 
       <h1>Results</h1>
 
       {axisResults.map((axisResult) => {
-        const fullAxis = quiz.axes.find(a => a.id === axisResult.axisId);
+        const fullAxis = test.axes.find(a => a.id === axisResult.axisId);
         const subLabel = getSubTierLabel(axisResult.left.percentage, fullAxis);
         return (
           <div key={axisResult.axisId}>

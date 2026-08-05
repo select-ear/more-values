@@ -4,10 +4,11 @@ import { AxisEditor } from './AxisEditor';
 import { QuestionEditor } from './QuestionEditor';
 import { IdeologyEditor } from './IdeologyEditor';
 
-export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThemeEditMode, setIsThemeEditMode }) {
+export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThemeEditMode, setIsThemeEditMode, user }) {
   const [activeTab, setActiveTab] = useState('axes');
   const [publishing, setPublishing] = useState(false);
   const [publishedMsg, setPublishedMsg] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   const handleMetadataChange = (field, value) => {
     setQuiz({ ...quiz, [field]: value });
@@ -28,13 +29,22 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
   const handlePublishClick = async () => {
     setPublishing(true);
     setPublishedMsg(null);
+    setErrorMsg(null);
     try {
       const res = await onPublish(quiz);
       if (res && res.success) {
-        setPublishedMsg(`Quiz published! Share URL: ${window.location.origin}/#quiz=${res.id}`);
+        const isUpdate = quiz.ownerId && user && quiz.ownerId === user.id;
+        const msg = isUpdate ? 'Changes saved successfully!' : `Quiz published! Share URL: ${window.location.origin}/#quiz=${res.id}`;
+        setPublishedMsg(msg);
+        
+        // Update local quiz state with the new ID and owner so subsequent clicks act as "Save"
+        setQuiz({ ...quiz, id: res.id, ownerId: user?.id || null });
+      } else {
+        setErrorMsg(res?.error || 'Failed to save changes.');
       }
     } catch (err) {
       console.error(err);
+      setErrorMsg('Network error occurred.');
     } finally {
       setPublishing(false);
     }
@@ -91,7 +101,7 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
           </button>
           
           <button className="btn btn-primary btn-sm" onClick={handlePublishClick} disabled={publishing}>
-            <Globe size={16} /> {publishing ? 'Publishing...' : 'Publish to Platform'}
+            <Globe size={16} /> {publishing ? 'Publishing...' : (quiz.ownerId && (!user || quiz.ownerId !== user.id) ? 'Fork & Publish' : (quiz.ownerId && user && quiz.ownerId === user.id ? 'Save Changes' : 'Publish to Platform'))}
           </button>
 
           <button className="btn btn-secondary btn-sm" onClick={() => {
@@ -110,7 +120,14 @@ export function Studio({ quiz, setQuiz, onPlayQuiz, onSaveFile, onPublish, isThe
       {publishedMsg && (
         <div style={{ background: 'rgba(22, 163, 74, 0.15)', border: '1px solid #16a34a', color: '#4caf50', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Check size={18} />
-          <span>{publishedMsg}</span>
+          {publishedMsg}
+        </div>
+      )}
+
+      {errorMsg && (
+        <div style={{ background: 'rgba(211, 47, 47, 0.15)', border: '1px solid #d32f2f', color: '#f44336', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontWeight: 'bold' }}>Error:</span>
+          {errorMsg}
         </div>
       )}
 

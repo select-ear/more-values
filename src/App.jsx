@@ -6,12 +6,43 @@ import { QuizResults } from './components/QuizResults';
 import { Studio } from './components/Studio/Studio';
 import { DEFAULT_8VALUES_QUIZ } from './utils/default8values';
 import { decodeQuizFromUrlHash, downloadQuizJson, parseQuizJsonFile } from './utils/compressor';
+import { AuthModal } from './components/AuthModal';
+import { ProfilePage } from './components/ProfilePage';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('explore');
   const [currentQuiz, setCurrentQuiz] = useState(DEFAULT_8VALUES_QUIZ);
   const [quizResults, setQuizResults] = useState(null);
   const [isThemeEditMode, setIsThemeEditMode] = useState(false);
+  const [viewingUsername, setViewingUsername] = useState(null);
+  
+  const [user, setUser] = useState(null);
+  const [authToken, setAuthToken] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('8values_user');
+    const storedToken = localStorage.getItem('8values_token');
+    if (storedUser && storedToken) {
+      setUser(JSON.parse(storedUser));
+      setAuthToken(storedToken);
+    }
+  }, []);
+
+  const handleLoginSuccess = (userData, tokenData) => {
+    setUser(userData);
+    setAuthToken(tokenData);
+    localStorage.setItem('8values_user', JSON.stringify(userData));
+    localStorage.setItem('8values_token', tokenData);
+    setShowAuthModal(false);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setAuthToken(null);
+    localStorage.removeItem('8values_user');
+    localStorage.removeItem('8values_token');
+  };
 
   const handleUpdateTheme = (field, value) => {
     setCurrentQuiz(prev => ({
@@ -76,14 +107,44 @@ export default function App() {
 
 
 
-  const handleSelectQuiz = (quiz) => {
-    setCurrentQuiz(quiz);
-    setActiveTab('play');
+  const handleSelectQuiz = async (quizSummary) => {
+    if (quizSummary.id === '8values-classic') {
+      setCurrentQuiz(DEFAULT_8VALUES_QUIZ);
+      setActiveTab('play');
+      return;
+    }
+    try {
+      const res = await fetch(`http://localhost:4000/api/quizzes/${quizSummary.id}`);
+      const data = await res.json();
+      if (data.success) {
+        setCurrentQuiz(data.quiz);
+        setActiveTab('play');
+      } else {
+        alert('Could not load quiz data.');
+      }
+    } catch (err) {
+      alert('Could not connect to server.');
+    }
   };
 
-  const handleEditQuiz = (quiz) => {
-    setCurrentQuiz(quiz);
-    setActiveTab('studio');
+  const handleEditQuiz = async (quizSummary) => {
+    if (quizSummary.id === '8values-classic') {
+      setCurrentQuiz(DEFAULT_8VALUES_QUIZ);
+      setActiveTab('studio');
+      return;
+    }
+    try {
+      const res = await fetch(`http://localhost:4000/api/quizzes/${quizSummary.id}`);
+      const data = await res.json();
+      if (data.success) {
+        setCurrentQuiz(data.quiz);
+        setActiveTab('studio');
+      } else {
+        alert('Could not load quiz data.');
+      }
+    } catch (err) {
+      alert('Could not connect to server.');
+    }
   };
 
   const handleQuizComplete = (results) => {
@@ -112,7 +173,10 @@ export default function App() {
     try {
       const response = await fetch('http://localhost:4000/api/publish', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+        },
         body: JSON.stringify(quizToPublish)
       });
       return await response.json();
@@ -124,12 +188,26 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }} className={isThemeEditMode ? 'theme-edit-mode' : ''}>
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+      <Navbar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
         onExportJson={handleExportJson}
-        onImportJsonClick={() => fileInputRef.current?.click()}
+        onImportJsonClick={() => fileInputRef.current?.click()} 
+        user={user}
+        onLoginClick={() => setShowAuthModal(true)}
+        onLogoutClick={handleLogout}
+        onViewProfile={() => {
+          setViewingUsername(user.username);
+          setActiveTab('profile');
+        }}
       />
+
+      {showAuthModal && (
+        <AuthModal 
+          onClose={() => setShowAuthModal(false)} 
+          onLoginSuccess={handleLoginSuccess} 
+        />
+      )}
 
       {/* Hidden File Input for Loading .8val.json files */}
       <input
@@ -145,6 +223,12 @@ export default function App() {
           <ExploreHub
             onSelectQuiz={handleSelectQuiz}
             onEditQuiz={handleEditQuiz}
+            user={user}
+            authToken={authToken}
+            onViewProfile={(username) => {
+              setViewingUsername(username);
+              setActiveTab('profile');
+            }}
           />
         )}
 
@@ -176,6 +260,18 @@ export default function App() {
             onPublish={handlePublishQuiz}
             isThemeEditMode={isThemeEditMode}
             setIsThemeEditMode={setIsThemeEditMode}
+            user={user}
+          />
+        )}
+
+        {activeTab === 'profile' && viewingUsername && (
+          <ProfilePage
+            username={viewingUsername}
+            user={user}
+            authToken={authToken}
+            onSelectQuiz={handleSelectQuiz}
+            onEditQuiz={handleEditQuiz}
+            onGoBack={() => setActiveTab('explore')}
           />
         )}
       </main>

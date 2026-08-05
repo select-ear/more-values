@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Play, GitFork, Download, Sparkles, Globe } from 'lucide-react';
+import { Search, Play, GitFork, Edit3, Trash2, Download, Sparkles, Globe, User } from 'lucide-react';
 import { DEFAULT_8VALUES_QUIZ } from '../utils/default8values';
 
-export function ExploreHub({ onSelectQuiz, onEditQuiz }) {
+export function ExploreHub({ onSelectQuiz, onEditQuiz, user, authToken, onViewProfile }) {
   const [quizzes, setQuizzes] = useState([DEFAULT_8VALUES_QUIZ]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,6 +30,26 @@ export function ExploreHub({ onSelectQuiz, onEditQuiz }) {
     };
     fetchQuizzes();
   }, []);
+
+  const handleDeleteQuiz = async (quizId) => {
+    if (!confirm('Are you sure you want to delete this test? This cannot be undone.')) return;
+    try {
+      const res = await fetch(`http://localhost:4000/api/quizzes/${quizId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setQuizzes(prev => prev.filter(q => q.id !== quizId));
+      } else {
+        alert(data.error || 'Failed to delete quiz');
+      }
+    } catch (err) {
+      alert('Could not connect to server.');
+    }
+  };
 
   const filteredQuizzes = quizzes.filter(q =>
     q.title?.toLowerCase().includes(search.toLowerCase()) ||
@@ -82,20 +102,38 @@ export function ExploreHub({ onSelectQuiz, onEditQuiz }) {
             {/* Card Content */}
             <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between', textAlign: 'left' }}>
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <span className="badge">
-                    {quiz.id === '8values-classic' ? 'Featured Preset' : 'Community Hosted'}
-                  </span>
+                <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     {quiz.axes?.length || quiz.axisCount || 4} Axes • {quiz.questions?.length || quiz.questionCount || 0} Questions
                   </span>
                 </div>
 
-                <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem', color: 'var(--text-main)' }}>
                   {quiz.title}
                 </h3>
+                
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500, marginRight: '0.25rem' }}>By</span>
+                  {quiz.ownerUsername ? (
+                    <span 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewProfile(quiz.ownerUsername);
+                      }}
+                      style={{ fontSize: '0.85rem', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 'bold' }}
+                      onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+                      onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+                    >
+                      {quiz.ownerUsername}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                      {quiz.id === '8values-classic' ? '8values Team' : (quiz.author || 'Anonymous')}
+                    </span>
+                  )}
+                </div>
 
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 1.25rem 0', lineHeight: 1.5 }}>
                   {quiz.description}
                 </p>
               </div>
@@ -109,13 +147,33 @@ export function ExploreHub({ onSelectQuiz, onEditQuiz }) {
                   <Play size={14} /> Do Test
                 </button>
 
-                <button
-                  className="btn btn-sm btn-fork"
-                  onClick={() => onEditQuiz(quiz)}
-                  title="Fork & Edit this Quiz in Creator"
-                >
-                  <GitFork size={14} /> Fork
-                </button>
+                {user && quiz.ownerId === user.id && quiz.id !== '8values-classic' ? (
+                  <>
+                    <button
+                      className="btn btn-sm btn-outline"
+                      onClick={() => onEditQuiz(quiz)}
+                      title="Edit this Quiz in Creator"
+                    >
+                      <Edit3 size={14} /> Edit
+                    </button>
+                    <button
+                      className="btn btn-sm"
+                      style={{ backgroundColor: '#d32f2f', color: 'white', border: 'none' }}
+                      onClick={() => handleDeleteQuiz(quiz.id)}
+                      title="Delete this Quiz"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="btn btn-sm btn-fork"
+                    onClick={() => onEditQuiz(quiz)}
+                    title="Fork & Edit this Quiz in Creator"
+                  >
+                    <GitFork size={14} /> Fork
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -532,3 +532,6 @@ span.weight-300 {
 .image-upload-wrapper:hover .image-upload-overlay {
   opacity: 1;
 }
+
+.btn-delete { background: #ef4444; color: #ffffff; border-color: #ef4444; }
+.btn-delete:hover { background: #cf4444; color: #ffffff; border-color: #cf4444; }

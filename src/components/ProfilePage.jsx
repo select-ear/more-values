@@ -2,11 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { User, Edit3, Check, Image as ImageIcon, Play, GitFork, ExternalLink, Link as LinkIcon, Save, X } from 'lucide-react';
 import { DEFAULT_8VALUES_TEST } from '../utils/default8values';
 import { TestCard } from './TestCard';
+import { ConfirmModal } from './ConfirmModal';
+import { ImageCropperModal } from './Studio/ImageCropperModal';
 
 export function ProfilePage({ username, user, authToken, onSelectTest, onEditTest, onGoBack }) {
   const [profile, setProfile] = useState(null);
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [recycleBinTests, setRecycleBinTests] = useState([]);
+  const [activeTab, setActiveTab] = useState('published');
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, testId: null, isHard: false });
+  const [cropModalState, setCropModalState] = useState({ isOpen: false, imageSrc: null });
   
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -35,6 +41,18 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
         setEditBio(data.profile.bio || '');
         setEditSocial(data.profile.socialMedia || '');
         setEditPic(data.profile.profilePicture || '');
+        
+        if (isOwner && authToken) {
+          try {
+            const rbRes = await fetch(`http://localhost:4000/api/profile/${username}/recycle-bin`, {
+              headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            const rbData = await rbRes.json();
+            if (rbData.success) {
+              setRecycleBinTests(rbData.tests);
+            }
+          } catch(e) {}
+        }
       } else {
         alert(data.error || 'Profile not found');
       }
@@ -42,6 +60,47 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
       alert('Network error loading profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    const { testId, isHard } = deleteModal;
+    setDeleteModal({ isOpen: false, testId: null, isHard: false });
+    if (!testId) return;
+    
+    try {
+      const endpoint = isHard ? `/api/tests/${testId}/permanent` : `/api/tests/${testId}`;
+      const res = await fetch(`http://localhost:4000${endpoint}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadProfile(); // Refresh list
+      } else {
+        alert(data.error || 'Failed to delete test');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while deleting test');
+    }
+  };
+
+  const handleRestoreTest = async (testId) => {
+    try {
+      const res = await fetch(`http://localhost:4000/api/tests/${testId}/restore`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadProfile(); // Refresh list
+      } else {
+        alert(data.error || 'Failed to restore test');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while restoring test');
     }
   };
 
@@ -54,26 +113,11 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_SIZE = 512;
-        let width = img.width;
-        let height = img.height;
-        if (width > height && width > MAX_SIZE) {
-          height = Math.round(height * MAX_SIZE / width);
-          width = MAX_SIZE;
-        } else if (height > MAX_SIZE) {
-          width = Math.round(width * MAX_SIZE / height);
-          height = MAX_SIZE;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        setEditPic(canvas.toDataURL('image/jpeg', 0.92));
-      };
-      img.src = event.target.result;
+      if (file.type === 'image/gif') {
+        setEditPic(event.target.result);
+        return;
+      }
+      setCropModalState({ isOpen: true, imageSrc: event.target.result });
     };
     reader.readAsDataURL(file);
   };
@@ -118,6 +162,17 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
 
   return (
     <div className="container" style={{ maxWidth: '900px', margin: '0 auto', paddingBottom: '4rem' }}>
+      <ImageCropperModal
+        isOpen={cropModalState.isOpen}
+        imageSrc={cropModalState.imageSrc}
+        aspectRatio={1}
+        title="Crop Profile Picture (1:1)"
+        onComplete={(croppedImg) => {
+          setEditPic(croppedImg);
+          setCropModalState({ isOpen: false, imageSrc: null });
+        }}
+        onCancel={() => setCropModalState({ isOpen: false, imageSrc: null })}
+      />
       
       {/* Profile Header */}
       <div className="axis-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', textAlign: 'center', backgroundColor: 'var(--container-bg)', borderRadius: '12px', padding: '2rem' }}>
@@ -127,13 +182,7 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
             <label style={{ display: 'block', width: '100%', height: '100%', cursor: 'pointer', margin: 0 }}>
               <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
               
-              {editPic ? (
-                 <img src={editPic} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                 <div style={{ width: '100%', height: '100%', backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                   <User size={64} color="var(--text-muted)" />
-                 </div>
-              )}
+              <img src={editPic || `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(profile.username)}`} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               
               <div className="avatar-overlay">
                 <ImageIcon size={28} style={{ marginBottom: '0.25rem' }} />
@@ -143,13 +192,7 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
           </div>
         ) : (
           <div>
-            {profile.profilePicture ? (
-               <img src={profile.profilePicture} alt="Avatar" style={{ width: '160px', height: '160px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--bg-primary)' }} />
-            ) : (
-               <div style={{ width: '160px', height: '160px', borderRadius: '50%', backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--bg-primary)' }}>
-                 <User size={64} color="var(--text-muted)" />
-               </div>
-            )}
+            <img src={profile.profilePicture || `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(profile.username)}`} alt="Avatar" style={{ width: '160px', height: '160px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--bg-primary)' }} />
           </div>
         )}
 
@@ -212,50 +255,116 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
         </div>
       </div>
 
-      <div style={{ margin: '3rem 0 1.5rem 0' }}>
+      <div style={{ margin: '3rem 0 1.5rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h2 style={{ fontSize: '1.75rem', margin: 0 }}>Tests by {profile.username}</h2>
+        {isOwner && (
+          <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-primary)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <button 
+              className={`btn btn-sm ${activeTab === 'published' ? 'btn-primary' : ''}`} 
+              style={{ background: activeTab === 'published' ? '' : 'transparent', color: activeTab === 'published' ? '' : 'var(--text-muted)' }}
+              onClick={() => setActiveTab('published')}
+            >
+              Published
+            </button>
+            <button 
+              className={`btn btn-sm ${activeTab === 'drafts' ? 'btn-primary' : ''}`} 
+              style={{ background: activeTab === 'drafts' ? '' : 'transparent', color: activeTab === 'drafts' ? '' : 'var(--text-muted)' }}
+              onClick={() => setActiveTab('drafts')}
+            >
+              Drafts ({draftTests.length})
+            </button>
+            <button 
+              className={`btn btn-sm ${activeTab === 'recycle' ? 'btn-primary' : ''}`} 
+              style={{ background: activeTab === 'recycle' ? '' : 'transparent', color: activeTab === 'recycle' ? '' : 'var(--text-muted)' }}
+              onClick={() => setActiveTab('recycle')}
+            >
+              Recycle Bin ({recycleBinTests.length})
+            </button>
+          </div>
+        )}
       </div>
       
-      {publishedTests.length === 0 && draftTests.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem', background: 'var(--container-bg)', borderRadius: '12px', color: 'var(--text-muted)' }}>
-          This user hasn't published any tests yet.
-        </div>
-      ) : (
-        <>
-          {publishedTests.length > 0 && (
-            <div style={{ marginBottom: '3rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                {publishedTests.map((test) => (
-                  <TestCard 
-                    key={test.id} 
-                    test={test} 
-                    isOwner={isOwner} 
-                    onSelectTest={onSelectTest} 
-                    onEditTest={onEditTest} 
-                  />
-                ))}
-              </div>
+      {activeTab === 'published' && (
+        publishedTests.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem', background: 'var(--container-bg)', borderRadius: '12px', color: 'var(--text-muted)' }}>
+            This user hasn't published any tests yet.
+          </div>
+        ) : (
+          <div style={{ marginBottom: '3rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+              {publishedTests.map((test) => (
+                <TestCard 
+                  key={test.id} 
+                  test={test} 
+                  isOwner={isOwner} 
+                  onSelectTest={onSelectTest} 
+                  onEditTest={onEditTest} 
+                  onDeleteTest={isOwner ? () => setDeleteModal({ isOpen: true, testId: test.id, isHard: false }) : null}
+                />
+              ))}
             </div>
-          )}
-
-          {isOwner && draftTests.length > 0 && (
-            <div>
-              <h3 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem 0', color: 'var(--text-main)' }}>Your Drafts</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                {draftTests.map((test) => (
-                  <TestCard 
-                    key={test.id} 
-                    test={test} 
-                    isOwner={isOwner} 
-                    onSelectTest={onSelectTest} 
-                    onEditTest={onEditTest} 
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+          </div>
+        )
       )}
+
+      {isOwner && activeTab === 'drafts' && (
+        draftTests.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem', background: 'var(--container-bg)', borderRadius: '12px', color: 'var(--text-muted)' }}>
+            No drafts found.
+          </div>
+        ) : (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+              {draftTests.map((test) => (
+                <TestCard 
+                  key={test.id} 
+                  test={test} 
+                  isOwner={isOwner} 
+                  onSelectTest={onSelectTest} 
+                  onEditTest={onEditTest} 
+                  onDeleteTest={isOwner ? () => setDeleteModal({ isOpen: true, testId: test.id, isHard: false }) : null}
+                />
+              ))}
+            </div>
+          </div>
+        )
+      )}
+
+      {isOwner && activeTab === 'recycle' && (
+        recycleBinTests.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem', background: 'var(--container-bg)', borderRadius: '12px', color: 'var(--text-muted)' }}>
+            Recycle Bin is empty.
+          </div>
+        ) : (
+          <div>
+            <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px', marginBottom: '1.5rem', textAlign: 'center' }}>
+              Items in the Recycle Bin will be automatically deleted after 30 days.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+              {recycleBinTests.map((test) => (
+                <div key={test.id} style={{ position: 'relative' }}>
+                  <div style={{ opacity: 0.6, pointerEvents: 'none' }}>
+                    <TestCard test={test} isOwner={false} />
+                  </div>
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', zIndex: 10 }}>
+                    <button className="btn btn-primary" onClick={() => handleRestoreTest(test.id)}>Restore</button>
+                    <button className="btn btn-delete" onClick={() => setDeleteModal({ isOpen: true, testId: test.id, isHard: true })}>Permanently Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      )}
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        title={deleteModal.isHard ? "Permanently Delete Test?" : "Move to Recycle Bin?"}
+        message={deleteModal.isHard ? "Are you sure you want to permanently delete this test? This action cannot be undone." : "Are you sure you want to move this test to the Recycle Bin? It will be automatically deleted in 30 days."}
+        confirmText={deleteModal.isHard ? "Permanently Delete" : "Move to Recycle Bin"}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteModal({ isOpen: false, testId: null, isHard: false })}
+      />
     </div>
   );
 }

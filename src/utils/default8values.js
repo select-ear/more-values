@@ -3,7 +3,6 @@ export const DEFAULT_8VALUES_TEST = {
   id: "8values-classic",
   title: "∞Values",
   description: "∞Values is a political test that attempts to assign percentages for eight different political values across 4 main axes.",
-  author: "8values Team",
   version: "1.0.0",
   theme: {
     background: "#dddddd",

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, Trash2, Sliders } from 'lucide-react';
 import { ValueIcon } from '../ValueIcon';
+import { RemoveButton } from '../RemoveButton';
 
 
 
@@ -120,9 +121,7 @@ export function AxisEditor({ axes, setAxes }) {
           <div key={axis.id || idx} className="studio-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>Axis #{idx + 1}</span>
-              <button className="small_button" style={{ padding: '4px 10px', fontSize: '10pt', background: '#d6271a' }} onClick={() => handleRemoveAxis(idx)}>
-                Remove
-              </button>
+              <RemoveButton className="btn-sm" onClick={() => handleRemoveAxis(idx)} />
             </div>
 
             <div className="form-group" style={{ marginBottom: '1rem' }}>
@@ -266,14 +265,12 @@ export function AxisEditor({ axes, setAxes }) {
                           className="form-input"
                           value={tier.name}
                           onChange={(e) => handleUpdateTier(idx, originalIndex, 'name', e.target.value)}
-                          placeholder="Tier Label"
+                          placeholder="e.g. Statist"
                           style={{ padding: '4px 8px' }}
                         />
                       </div>
                       
-                      <button className="menu-btn" style={{ background: 'none', border: 'none', color: '#d6271a', padding: '4px', minWidth: 'auto', width: 'auto' }} onClick={() => handleRemoveTier(idx, originalIndex)}>
-                        <Trash2 size={18} />
-                      </button>
+                      <RemoveButton iconOnly={true} className="btn-sm" onClick={() => handleRemoveTier(idx, originalIndex)} />
                     </div>
                   );
                 })}

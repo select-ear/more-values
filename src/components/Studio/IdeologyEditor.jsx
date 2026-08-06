@@ -1,5 +1,6 @@
 import React from 'react';
-import { Plus, Trash2, Award } from 'lucide-react';
+import { Plus, Trash2, Award, GripVertical } from 'lucide-react';
+import { RemoveButton } from '../RemoveButton';
 import { ValueIcon } from '../ValueIcon';
 
 export function IdeologyEditor({ ideologies = [], setIdeologies, axes }) {
@@ -45,9 +46,7 @@ export function IdeologyEditor({ ideologies = [], setIdeologies, axes }) {
                 <span style={{ fontWeight: 700 }}>Ideology #{idx + 1}</span>
               </div>
 
-              <button className="btn btn-danger btn-sm" onClick={() => handleRemoveIdeology(idx)}>
-                <Trash2 size={14} /> Remove
-              </button>
+              <RemoveButton className="btn-sm" onClick={() => handleRemoveIdeology(idx)} />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>

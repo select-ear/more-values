@@ -82,32 +82,48 @@ export default function App() {
     }
   }, [currentTest.theme, activeTab]);
 
+  useEffect(() => {
+    if (activeTab === 'play' || activeTab === 'results' || activeTab === 'studio') {
+      document.title = currentTest?.title || '8values Publisher';
+    } else if (activeTab === 'profile') {
+      document.title = viewingUsername ? `${viewingUsername}'s Profile` : 'Profile';
+    } else {
+      document.title = '8values Publisher';
+    }
+  }, [activeTab, currentTest?.title, viewingUsername]);
+
   const fileInputRef = useRef(null);
 
   // Read URL Hash for shared payload on startup
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash;
-      if (hash && hash.includes('#test=')) {
-        const testParam = hash.replace('#test=', '');
-
-        // Check if hash is short backend ID or compressed string payload
-        if (testParam.length < 12) {
-          fetch(`http://localhost:4000/api/tests/${testParam}`)
-            .then(r => r.json())
-            .then(data => {
-              if (data.success && data.test) {
-                setCurrentTest(data.test);
-                setActiveTab('play');
-              }
-            })
-            .catch(err => console.error("Error loading server test ID:", err));
-        } else {
-          const decoded = decodeTestFromUrlHash(hash);
-          if (decoded) {
-            setCurrentTest(decoded);
+      if (hash && hash.startsWith('#/')) {
+        const parts = hash.slice(2).split('/');
+        if (parts.length === 2) {
+          const username = parts[0];
+          const slug = parts[1];
+          if (username === '8values' && slug === 'classic') {
+            setCurrentTest(DEFAULT_8VALUES_TEST);
             setActiveTab('play');
+          } else {
+            fetch(`http://localhost:4000/api/tests/by-slug/${username}/${slug}`)
+              .then(r => r.json())
+              .then(data => {
+                if (data.success && data.test) {
+                  setCurrentTest(data.test);
+                  setActiveTab('play');
+                }
+              })
+              .catch(err => console.error("Error loading server test slug:", err));
           }
+        }
+      } else if (hash && hash.includes('#test=')) {
+        // Fallback for compressed string payload URLs
+        const decoded = decodeTestFromUrlHash(hash);
+        if (decoded) {
+          setCurrentTest(decoded);
+          setActiveTab('play');
         }
       }
     };
@@ -116,13 +132,26 @@ export default function App() {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+  
+  // Clear URL hash when leaving the play tab so the link doesn't stick around
+  useEffect(() => {
+    if (activeTab !== 'play' && (window.location.hash.startsWith('#/') || window.location.hash.includes('#test='))) {
+      window.history.pushState(null, '', window.location.pathname);
+    }
+  }, [activeTab]);
 
-
+  const encodeSlug = (title) => {
+    let slug = title.replace(/ /g, '-');
+    return encodeURIComponent(slug).replace(/[!'()*]/g, function(c) {
+      return '%' + c.charCodeAt(0).toString(16).toUpperCase();
+    });
+  };
 
   const handleSelectTest = async (testSummary) => {
     setIsDemoMode(false);
     if (testSummary.id === '8values-classic') {
       resetHistory(DEFAULT_8VALUES_TEST);
+      window.history.pushState(null, '', '#/8values/classic');
       setActiveTab('play');
       return;
     }
@@ -131,6 +160,9 @@ export default function App() {
       const data = await res.json();
       if (data.success) {
         resetHistory(data.test);
+        const slug = encodeSlug(testSummary.title);
+        const username = testSummary.ownerUsername || 'guest';
+        window.history.pushState(null, '', `#/${username}/${slug}`);
         setActiveTab('play');
       } else {
         alert('Could not load test data.');

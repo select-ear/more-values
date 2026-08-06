@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, Trash2, HelpCircle } from 'lucide-react';
 import { ValueIcon } from '../ValueIcon';
+import { RemoveButton } from '../RemoveButton';
 
 export function QuestionEditor({ questions, setQuestions, axes }) {
   const handleAddQuestion = () => {
@@ -58,9 +59,7 @@ export function QuestionEditor({ questions, setQuestions, axes }) {
           <div key={q.id || qIdx} className="axis-card" style={{ textAlign: 'left', padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <span style={{ fontWeight: 700, color: 'var(--accent-color)' }}>Question #{qIdx + 1}</span>
-              <button className="btn btn-danger btn-sm" onClick={() => handleRemoveQuestion(qIdx)}>
-                <Trash2 size={14} /> Remove
-              </button>
+              <RemoveButton className="btn-sm" onClick={() => handleRemoveQuestion(qIdx)} />
             </div>
 
             <div className="form-group">

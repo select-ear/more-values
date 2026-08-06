@@ -3,11 +3,14 @@ import { Download, Upload, Play, Globe, RotateCcw, Save, Check, Palette, Image a
 import { AxisEditor } from './AxisEditor';
 import { QuestionEditor } from './QuestionEditor';
 import { IdeologyEditor } from './IdeologyEditor';
+import { ImageCropperModal } from './ImageCropperModal';
+import { RemoveButton } from '../RemoveButton';
 
 export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, setIsThemeEditMode, user, undo, redo, canUndo, canRedo }) {
   const [activeTab, setActiveTab] = useState('axes');
   const [publishing, setPublishing] = useState(false);
   const [publishedMsg, setPublishedMsg] = useState(null);
+  const [cropModalState, setCropModalState] = useState({ isOpen: false, imageSrc: null, type: null });
   const [errorMsg, setErrorMsg] = useState(null);
 
   // References for unmount auto-save
@@ -95,36 +98,18 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
     }
   };
 
-  const handleImageUpload = (e, field, maxWidth) => {
+  const handleImageUpload = (e, field) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Compress as JPEG for thumbnails, PNG for favicons (to preserve transparency)
-        const format = field === 'favicon' ? 'image/png' : 'image/jpeg';
-        const quality = field === 'favicon' ? 1.0 : 0.8;
-        const dataUrl = canvas.toDataURL(format, quality);
-
-        handleMetadataChange(field, dataUrl);
-      };
-      img.src = event.target.result;
+      if (file.type === 'image/gif') {
+        handleMetadataChange(field, event.target.result);
+        return;
+      }
+      
+      setCropModalState({ isOpen: true, imageSrc: event.target.result, type: field });
     };
     reader.readAsDataURL(file);
   };
@@ -201,16 +186,7 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Author Name</label>
-            <input
-              type="text"
-              className="form-input"
-              value={test.author || ''}
-              onChange={(e) => handleMetadataChange('author', e.target.value)}
-              placeholder="Your name or organization"
-            />
-          </div>
+
         </div>
 
         <div className="form-group">
@@ -253,22 +229,22 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
               <div className="image-upload-overlay">
                 <Upload size={24} style={{ marginBottom: '0.5rem' }} />
                 {test.thumbnail ? 'Change Cover Image' : 'Upload Cover Image'}
+                <input 
+                  style={{ display: 'none' }} 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => handleImageUpload(e, 'thumbnail')} 
+                />
               </div>
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={(e) => handleImageUpload(e, 'thumbnail', 600)} 
-              />
             </label>
 
             {test.thumbnail && (
-              <button 
-                className="btn btn-danger btn-sm" 
+              <RemoveButton 
+                className="btn-sm" 
                 style={{ width: '100%', padding: '0.5rem' }}
+                label="Remove Cover Image"
                 onClick={() => handleMetadataChange('thumbnail', null)}
-              >
-                <Trash2 size={16} /> Remove Cover Image
-              </button>
+              />
             )}
           </div>
 
@@ -291,23 +267,24 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
               )}
               <div className="image-upload-overlay" style={{ fontSize: '0.75rem' }}>
                 <Upload size={16} style={{ marginBottom: '0.25rem' }} />
-                Upload
+                <input 
+                  style={{ display: 'none' }} 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => handleImageUpload(e, 'favicon')} 
+                />
               </div>
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={(e) => handleImageUpload(e, 'favicon', 128)} 
-              />
             </label>
 
             {test.favicon && (
-              <button 
-                className="btn btn-danger btn-sm" 
-                style={{ width: '80px', padding: '0.25rem' }}
-                onClick={() => handleMetadataChange('favicon', null)}
-              >
-                <Trash2 size={14} /> Remove
-              </button>
+              <div style={{ marginTop: '0.5rem' }}>
+                <RemoveButton 
+                  className="btn-sm" 
+                  noIcon={true}
+                  style={{ width: '80px', padding: '0.25rem', fontSize: '0.85rem' }}
+                  onClick={() => handleMetadataChange('favicon', null)}
+                />
+              </div>
             )}
           </div>
 
@@ -363,6 +340,18 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
       {activeTab === 'ideologies' && (
         <IdeologyEditor ideologies={test.ideologies || []} setIdeologies={handleIdeologiesChange} axes={test.axes || []} />
       )}
+
+      <ImageCropperModal
+        isOpen={cropModalState.isOpen}
+        imageSrc={cropModalState.imageSrc}
+        aspectRatio={cropModalState.type === 'thumbnail' ? (16 / 9) : 1}
+        title={cropModalState.type === 'thumbnail' ? "Crop Cover Image (16:9)" : "Crop Favicon (1:1)"}
+        onComplete={(croppedImage) => {
+          handleMetadataChange(cropModalState.type, croppedImage);
+          setCropModalState({ isOpen: false, imageSrc: null, type: null });
+        }}
+        onCancel={() => setCropModalState({ isOpen: false, imageSrc: null, type: null })}
+      />
     </div>
   );
 }

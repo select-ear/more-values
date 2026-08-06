@@ -32,26 +32,6 @@ export function ExploreHub({ onSelectTest, onEditTest, user, authToken, onViewPr
     fetchTests();
   }, []);
 
-  const handleDeleteTest = async (testId) => {
-    if (!confirm('Are you sure you want to delete this test? This cannot be undone.')) return;
-    try {
-      const res = await fetch(`http://localhost:4000/api/tests/${testId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTests(prev => prev.filter(q => q.id !== testId));
-      } else {
-        alert(data.error || 'Failed to delete test');
-      }
-    } catch (err) {
-      alert('Could not connect to server.');
-    }
-  };
-
   const filteredTests = tests.filter(q =>
     q.title?.toLowerCase().includes(search.toLowerCase()) ||
     q.description?.toLowerCase().includes(search.toLowerCase())
@@ -89,7 +69,6 @@ export function ExploreHub({ onSelectTest, onEditTest, user, authToken, onViewPr
             onSelectTest={onSelectTest} 
             onEditTest={onEditTest} 
             onViewProfile={onViewProfile} 
-            onDeleteTest={(user && test.ownerId === user.id && test.id !== '8values-classic') ? handleDeleteTest : null}
           />
         ))}
       </div>

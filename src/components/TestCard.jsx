@@ -84,7 +84,7 @@ export function TestCard({ test, isOwner, onSelectTest, onEditTest, onViewProfil
               </button>
               {isOwner ? (
                 <button className="btn btn-sm btn-outline" onClick={() => onEditTest(test)} title="Open in Studio Creator">
-                  <Edit3 size={14} /> Remix
+                  <Edit3 size={14} /> Edit
                 </button>
               ) : (
                 <button className="btn btn-sm btn-fork" onClick={() => onEditTest(test)} title="Fork & Edit this Test in Creator">
@@ -95,8 +95,8 @@ export function TestCard({ test, isOwner, onSelectTest, onEditTest, onViewProfil
           )}
           {onDeleteTest && (
             <button
-              className="btn btn-sm btn-outline"
-              style={{ color: 'var(--text-muted)', borderColor: 'var(--border-color)', padding: '0.25rem 0.5rem' }}
+              className="btn btn-sm btn-delete"
+              style={{ padding: '0.25rem 0.5rem' }}
               onClick={(e) => {
                 e.stopPropagation();
                 onDeleteTest(test.id);

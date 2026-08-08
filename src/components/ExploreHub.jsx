@@ -24,12 +24,7 @@ export function ExploreHub({ onSelectTest, onEditTest, user, authToken, onViewPr
         const res = await fetch('/api/tests');
         const data = await res.json();
         if (data.success && Array.isArray(data.tests)) {
-          // Merge API tests with default 8values
-          const merged = [
-            DEFAULT_8VALUES_TEST,
-            ...data.tests.filter(q => q.id !== '8values-classic')
-          ];
-          setTests(merged);
+          setTests(data.tests);
         }
       } catch (err) {
         // Backend server offline, fallback to preset tests

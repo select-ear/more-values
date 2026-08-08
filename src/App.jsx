@@ -264,6 +264,10 @@ export default function App() {
             onEditInStudio={() => setActiveTab('studio')}
             isThemeEditMode={isThemeEditMode}
             onUpdateTheme={handleUpdateTheme}
+            onViewProfile={(username) => {
+              setViewingUsername(username);
+              setActiveTab('profile');
+            }}
           />
         )}
 

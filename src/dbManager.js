@@ -149,7 +149,7 @@ class DatabaseManager {
 
   async getTestBySlug(username, slug) {
     const row = await this.get(`
-      SELECT t.document, t.id
+      SELECT t.document, t.id, u.username as ownerUsername
       FROM tests t
       JOIN users u ON t.ownerId = u.id
       WHERE LOWER(u.username) = LOWER(?)
@@ -163,14 +163,25 @@ class DatabaseManager {
     if (row) {
       const testData = JSON.parse(row.document);
       testData.id = row.id;
+      testData.ownerUsername = row.ownerUsername;
       return testData;
     }
     return null;
   }
 
   async getTestById(id) {
-    const row = await this.get('SELECT document FROM tests WHERE id = ?', [id]);
-    return row ? JSON.parse(row.document) : null;
+    const row = await this.get(`
+      SELECT t.document, u.username as ownerUsername 
+      FROM tests t 
+      LEFT JOIN users u ON t.ownerId = u.id 
+      WHERE t.id = ?
+    `, [id]);
+    if (row) {
+      const testData = JSON.parse(row.document);
+      if (row.ownerUsername) testData.ownerUsername = row.ownerUsername;
+      return testData;
+    }
+    return null;
   }
 
   async getTestOwnerId(id) {

@@ -377,7 +377,7 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
           <div>
             <label className="form-label">Custom Theme Colours</label>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-              Launch the live colour picker to customize the appearance of your test.
+              Customise your test colours with the colour picker.
             </p>
             <button className="btn btn-secondary" style={{ width: '100%', padding: '0.75rem' }} onClick={() => {
               setIsThemeEditMode(true);

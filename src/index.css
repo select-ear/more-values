@@ -37,7 +37,6 @@ p.value {
     line-height: 1.2;
     letter-spacing: 0.03em;
     font-family: 'Montserrat', sans-serif;
-    font-weight: 800;
 }
 
 p.axis_name {
@@ -104,15 +103,6 @@ hr {
     margin: 1.5rem 0;
 }
 
-/* GitHub Corner Cat Animation */
-.github-corner:hover .octo-arm {
-    animation: octocat-wave 560ms ease-in-out;
-}
-@keyframes octocat-wave {
-    0%,100%{transform:rotate(0)}
-    20%,60%{transform:rotate(-25deg)}
-    40%,80%{transform:rotate(10deg)}
-}
 
 /* Navigation Bar */
 .top-nav {

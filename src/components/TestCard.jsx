@@ -56,7 +56,7 @@ export function TestCard({ test, isOwner, onSelectTest, onEditTest, onViewProfil
               </span>
             ) : (
               <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                {test.id === '8values-classic' ? '8values Team' : (test.author || (isDraft ? 'You' : 'Anonymous'))}
+                {test.id === '8values-classic' ? '8values Team' : (isDraft ? 'You' : 'Anonymous')}
               </span>
             )}
           </div>

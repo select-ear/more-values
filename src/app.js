@@ -20,9 +20,13 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const SECRET_FILE = path.join(DATA_DIR, 'secret.json');
 
-// Ensure storage directories exist
+// Ensure storage directories exist only if we have filesystem access (fails silently on Vercel)
 if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  } catch (e) {
+    // Ignore, running in serverless read-only environment
+  }
 }
 
 // Generate or load JWT Secret

@@ -84,11 +84,11 @@ export default function App() {
 
   useEffect(() => {
     if (activeTab === 'play' || activeTab === 'results' || activeTab === 'studio') {
-      document.title = currentTest?.title || '8values Publisher';
+      document.title = currentTest?.title || 'MoreValues';
     } else if (activeTab === 'profile') {
       document.title = viewingUsername ? `${viewingUsername}'s Profile` : 'Profile';
     } else {
-      document.title = '8values Publisher';
+      document.title = 'MoreValues';
     }
   }, [activeTab, currentTest?.title, viewingUsername]);
 

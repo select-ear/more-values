@@ -49,7 +49,7 @@ export function QuestionEditor({ questions, setQuestions, axes }) {
         <div>
           <h3>Statements & Questions ({questions.length})</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Add statements and define which direction they push the user on each axis when they agree.
+            Add questions and control which axes are affected when you agree.
           </p>
         </div>
       </div>

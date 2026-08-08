@@ -266,7 +266,6 @@ export function TestPlayer(props) {
             background: 'white', 
             padding: '12px', 
             borderRadius: '8px', 
-            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
             border: '1px solid #ccc'
           }}
         >

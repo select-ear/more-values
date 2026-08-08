@@ -1,3 +1,10 @@
+/**
+ * app.js
+ * 
+ * Main Express application configuration and route definitions.
+ * This file handles all REST API endpoints for the 8values Publisher backend,
+ * including user authentication, profile management, and test CRUD operations.
+ */
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -38,6 +45,12 @@ app.use(express.json({ limit: '10mb' }));
 
 // ---------------- MIDDLEWARE ---------------- //
 
+/**
+ * authMiddleware
+ * Extracts the JWT from the Authorization header and verifies it.
+ * If valid, attaches the decoded user payload to req.user.
+ * Does not block the request if the token is invalid or missing (use requireAuth for that).
+ */
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -52,6 +65,11 @@ const authMiddleware = (req, res, next) => {
   next();
 };
 
+/**
+ * requireAuth
+ * Middleware to enforce authentication. Must be used AFTER authMiddleware.
+ * Blocks the request with a 401 Unauthorized if req.user is not set.
+ */
 const requireAuth = (req, res, next) => {
   if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
   next();
@@ -59,6 +77,10 @@ const requireAuth = (req, res, next) => {
 
 // ---------------- API ENDPOINTS ---------------- //
 
+/**
+ * POST /api/register
+ * Registers a new user account with a unique username and hashed password.
+ */
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -92,6 +114,10 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/login
+ * Authenticates a user and returns a signed JWT token valid for 7 days.
+ */
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -119,6 +145,11 @@ app.get('/api/auth/me', authMiddleware, requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/profile/:username
+ * Fetches public profile data (bio, social media, avatar) and published tests
+ * for a specific user.
+ */
 app.get('/api/profile/:username', async (req, res) => {
   try {
     const user = await dbManager.getUserByUsername(req.params.username);
@@ -179,6 +210,11 @@ app.get('/api/profile/:username/recycle-bin', authMiddleware, requireAuth, async
   }
 });
 
+/**
+ * PUT /api/profile
+ * Updates the authenticated user's profile details (bio, social media, avatar).
+ * Validates payload size and format for images.
+ */
 app.put('/api/profile', authMiddleware, requireAuth, async (req, res) => {
   try {
     const { bio, socialMedia, profilePicture } = req.body;
@@ -212,6 +248,10 @@ app.put('/api/profile', authMiddleware, requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/tests
+ * Fetches a list of all publicly published tests from all users.
+ */
 app.get('/api/tests', async (req, res) => {
   try {
     const tests = await dbManager.getPublishedTests();
@@ -245,6 +285,13 @@ app.get('/api/tests/:id', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/publish
+ * Publishes or saves a draft of a test.
+ * If the user does not own the test (e.g. forking someone else's test),
+ * it implicitly generates a new test ID and assigns ownership to the caller.
+ * Validates the complete structure of the test JSON (axes, questions, ideologies).
+ */
 app.post('/api/publish', authMiddleware, requireAuth, async (req, res) => {
   try {
     const test = req.body;
@@ -315,6 +362,10 @@ app.post('/api/publish', authMiddleware, requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/tests/:id
+ * Soft deletes a test (moves it to the recycle bin by setting deletedAt).
+ */
 app.delete('/api/tests/:id', authMiddleware, requireAuth, async (req, res) => {
   try {
     const ownerId = await dbManager.getTestOwnerId(req.params.id);
@@ -332,6 +383,10 @@ app.delete('/api/tests/:id', authMiddleware, requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/tests/:id/permanent
+ * Permanently deletes a test from the database. Cannot be undone.
+ */
 app.delete('/api/tests/:id/permanent', authMiddleware, requireAuth, async (req, res) => {
   try {
     const ownerId = await dbManager.getTestOwnerId(req.params.id);
@@ -349,6 +404,10 @@ app.delete('/api/tests/:id/permanent', authMiddleware, requireAuth, async (req, 
   }
 });
 
+/**
+ * POST /api/tests/:id/restore
+ * Restores a soft-deleted test from the recycle bin back to the published or drafted state.
+ */
 app.post('/api/tests/:id/restore', authMiddleware, requireAuth, async (req, res) => {
   try {
     const ownerId = await dbManager.getTestOwnerId(req.params.id);

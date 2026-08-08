@@ -29,7 +29,7 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
   const loadProfile = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/api/profile/${username}`, {
+      const res = await fetch(`/api/profile/${username}`, {
         headers: authToken ? {
           'Authorization': `Bearer ${authToken}`
         } : {}
@@ -44,7 +44,7 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
         
         if (isOwner && authToken) {
           try {
-            const rbRes = await fetch(`http://localhost:4000/api/profile/${username}/recycle-bin`, {
+            const rbRes = await fetch(`/api/profile/${username}/recycle-bin`, {
               headers: { 'Authorization': `Bearer ${authToken}` }
             });
             const rbData = await rbRes.json();
@@ -70,7 +70,7 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
     
     try {
       const endpoint = isHard ? `/api/tests/${testId}/permanent` : `/api/tests/${testId}`;
-      const res = await fetch(`http://localhost:4000${endpoint}`, {
+      const res = await fetch(`${endpoint}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
@@ -88,7 +88,7 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
 
   const handleRestoreTest = async (testId) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/tests/${testId}/restore`, {
+      const res = await fetch(`/api/tests/${testId}/restore`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
@@ -125,7 +125,7 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
   const saveProfile = async () => {
     setSaving(true);
     try {
-      const res = await fetch('http://localhost:4000/api/profile', {
+      const res = await fetch('/api/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -161,7 +161,7 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
   }
 
   return (
-    <div className="container" style={{ maxWidth: '900px', margin: '0 auto', paddingBottom: '4rem' }}>
+    <div className="container" style={{ maxWidth: '100%', margin: '0 auto', paddingBottom: '4rem' }}>
       <ImageCropperModal
         isOpen={cropModalState.isOpen}
         imageSrc={cropModalState.imageSrc}
@@ -191,7 +191,7 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
             </label>
           </div>
         ) : (
-          <div>
+          <div style={{ position: 'relative' }}>
             <img src={profile.profilePicture || `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(profile.username)}`} alt="Avatar" style={{ width: '160px', height: '160px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--bg-primary)' }} />
           </div>
         )}
@@ -206,22 +206,17 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
                 <textarea 
                   value={editBio} 
                   onChange={e => setEditBio(e.target.value)} 
-                  placeholder="Tell us about yourself..."
-                  style={{ width: '100%', minHeight: '80px', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-main)', resize: 'vertical' }}
+                  style={{ width: '100%', minHeight: '80px', padding: '0.75rem', borderRadius: '6px', border: '2px solid #cccccc', background: 'var(--bg-primary)', color: 'var(--text-main)', resize: 'vertical' }}
                 />
               </div>
               <div>
                 <label style={{ display: 'block', textAlign: 'left', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Social Media Link</label>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <LinkIcon size={18} color="var(--text-muted)" />
                   <input 
                     type="text" 
                     value={editSocial} 
-                    onChange={e => setEditSocial(e.target.value)} 
-                    placeholder="https://x.com/username"
-                    style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-main)' }}
+                    onChange={e => setEditSocial(e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '2px solid #cccccc', background: 'var(--bg-primary)', color: 'var(--text-main)' }}
                   />
-                </div>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '1rem' }}>
                 <button className="btn btn-primary" onClick={saveProfile} disabled={saving}>
@@ -264,7 +259,7 @@ export function ProfilePage({ username, user, authToken, onSelectTest, onEditTes
               style={{ background: activeTab === 'published' ? '' : 'transparent', color: activeTab === 'published' ? '' : 'var(--text-muted)' }}
               onClick={() => setActiveTab('published')}
             >
-              Published
+              Published ({publishedTests.length})
             </button>
             <button 
               className={`btn btn-sm ${activeTab === 'drafts' ? 'btn-primary' : ''}`} 

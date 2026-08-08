@@ -13,7 +13,7 @@ export function ExploreHub({ onSelectTest, onEditTest, user, authToken, onViewPr
     const fetchTests = async () => {
       setLoading(true);
       try {
-        const res = await fetch('http://localhost:4000/api/tests');
+        const res = await fetch('/api/tests');
         const data = await res.json();
         if (data.success && Array.isArray(data.tests)) {
           // Merge API tests with default 8values
@@ -40,9 +40,9 @@ export function ExploreHub({ onSelectTest, onEditTest, user, authToken, onViewPr
   return (
     <div className="container">
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-        <h1>∞Values</h1>
+        <h1>MoreValues</h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', maxWidth: '650px', margin: '0.5rem auto' }}>
-          Explore all the tests made by our community, or create your own in the Creator tab!
+          Explore community-made tests, or make your own!
         </p>
 
         {/* Search Input */}

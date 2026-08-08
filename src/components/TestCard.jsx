@@ -10,7 +10,7 @@ export function TestCard({ test, isOwner, onSelectTest, onEditTest, onViewProfil
       flexDirection: 'column', 
       overflow: 'hidden', 
       padding: 0,
-      backgroundColor: 'var(--container-bg, #ffffff)',
+      backgroundColor: 'var(--container-bg, #eeeeee',
       borderRadius: '8pt',
       ...(isDraft ? { border: '1px dashed var(--border-color)' } : {})
     }}>

@@ -1,3 +1,9 @@
+/**
+ * dbManager.js
+ * 
+ * Provides a Data Access Object (DAO) pattern around the SQLite database.
+ * Abstracts all SQL queries and schema management away from the Express routing logic.
+ */
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import path from 'path';
@@ -14,6 +20,11 @@ class DatabaseManager {
     this.db = null;
   }
 
+  /**
+   * Initializes the SQLite database connection and sets up the schema.
+   * Creates 'users' and 'tests' tables if they don't already exist.
+   * @param {string} filename - The path to the SQLite database file.
+   */
   async init(filename = DB_FILE) {
     // Ensure data directory exists if using a file path in the data dir
     if (filename.includes(DATA_DIR) && !fs.existsSync(DATA_DIR)) {
@@ -72,6 +83,9 @@ class DatabaseManager {
 
   // --- Users ---
   
+  /**
+   * Fetches a user by their username (case-insensitive due to COLLATE NOCASE).
+   */
   async getUserByUsername(username) {
     return await this.getDb().get('SELECT * FROM users WHERE username = ?', [username]);
   }
@@ -97,6 +111,10 @@ class DatabaseManager {
 
   // --- Tests ---
 
+  /**
+   * Retrieves all published tests (not drafts, not deleted).
+   * Joins with the users table to include the owner's username.
+   */
   async getPublishedTests() {
     return await this.getDb().all(`
       SELECT q.id, q.title, q.description, q.author, q.axisCount, q.questionCount, q.publishedAt, u.username as ownerUsername
@@ -145,6 +163,10 @@ class DatabaseManager {
     );
   }
 
+  /**
+   * Upserts (INSERT OR REPLACE) a test into the database.
+   * The actual test data is stored as a JSON string in the 'document' column.
+   */
   async saveTest(testId, ownerId, test, isDraft) {
     const documentString = JSON.stringify(test);
     await this.getDb().run(`

@@ -121,7 +121,7 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
         <div>
           <h1>Creator</h1>
           <p style={{ color: 'var(--text-muted)' }}>
-            Design your test, customize colors, add questions, and publish.
+            Design and publish your test here.
           </p>
         </div>
 

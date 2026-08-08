@@ -30,9 +30,9 @@ export function IdeologyEditor({ ideologies = [], setIdeologies, axes }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
-          <h3>Result Classifications & Ideologies ({ideologies.length})</h3>
+          <h3>Ideologies ({ideologies.length})</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Define custom titles and descriptions displayed on the final results card when user scores match specific ranges.
+            You'll be given one of these ideologies at the end of the test.
           </p>
         </div>
       </div>
@@ -51,7 +51,7 @@ export function IdeologyEditor({ ideologies = [], setIdeologies, axes }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
               <div className="form-group">
-                <label className="form-label">Classification Title</label>
+                <label className="form-label">Name</label>
                 <input
                   type="text"
                   className="form-input"
@@ -76,7 +76,7 @@ export function IdeologyEditor({ ideologies = [], setIdeologies, axes }) {
             {/* Criteria List */}
             <div style={{ marginTop: '1.5rem' }}>
               <label className="form-label" style={{ marginBottom: '1rem' }}>
-                Axis Match Target (Drag the bars below to define this ideology's position on the spectrum)
+                Axis Match Target (Drag the bars to customise)
               </label>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>

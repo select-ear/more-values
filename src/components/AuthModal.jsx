@@ -15,7 +15,7 @@ export function AuthModal({ onClose, onLoginSuccess }) {
 
     const endpoint = isLogin ? '/api/login' : '/api/register';
     try {
-      const res = await fetch(`http://localhost:4000${endpoint}`, {
+      const res = await fetch(`${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -47,7 +47,7 @@ export function AuthModal({ onClose, onLoginSuccess }) {
         width: '100%', 
         maxWidth: '400px',
         position: 'relative',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+        
       }}>
         <button onClick={onClose} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', cursor: 'pointer' }}>
           <X size={20} />

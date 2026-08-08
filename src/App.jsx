@@ -107,7 +107,7 @@ export default function App() {
             setCurrentTest(DEFAULT_8VALUES_TEST);
             setActiveTab('play');
           } else {
-            fetch(`http://localhost:4000/api/tests/by-slug/${username}/${slug}`)
+            fetch(`/api/tests/by-slug/${username}/${slug}`)
               .then(r => r.json())
               .then(data => {
                 if (data.success && data.test) {
@@ -156,7 +156,7 @@ export default function App() {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:4000/api/tests/${testSummary.id}`);
+      const res = await fetch(`/api/tests/${testSummary.id}`);
       const data = await res.json();
       if (data.success) {
         resetHistory(data.test);
@@ -180,7 +180,7 @@ export default function App() {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:4000/api/tests/${testSummary.id}`);
+      const res = await fetch(`/api/tests/${testSummary.id}`);
       const data = await res.json();
       if (data.success) {
         resetHistory(data.test);
@@ -201,7 +201,7 @@ export default function App() {
 
   const handlePublishTest = async (testToPublish, isDraft = false) => {
     try {
-      const response = await fetch('http://localhost:4000/api/publish', {
+      const response = await fetch('/api/publish', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -222,6 +222,10 @@ export default function App() {
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         user={user}
+        onCreateTest={() => {
+          resetHistory(DEFAULT_8VALUES_TEST);
+          setActiveTab('studio');
+        }}
         onLoginClick={() => setShowAuthModal(true)}
         onLogoutClick={handleLogout}
         onViewProfile={() => {
@@ -331,7 +335,7 @@ export default function App() {
             cursor: 'pointer', 
             transition: 'all 0.2s ease', 
             fontFamily: "'Montserrat', sans-serif",
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+            
           }}
           onMouseOver={(e) => e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)'}
           onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(-50%) scale(1)'}
@@ -363,7 +367,7 @@ export default function App() {
             cursor: 'pointer', 
             transition: 'all 0.2s ease', 
             fontFamily: "'Montserrat', sans-serif",
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+            
           }}
           onMouseOver={(e) => e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)'}
           onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(-50%) scale(1)'}

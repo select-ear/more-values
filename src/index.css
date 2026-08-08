@@ -8,7 +8,6 @@ html {
 
 body {
     width: 80%;
-    max-width: 1050px;
     min-height: calc(100vh - 4em);
     margin: 0 auto;
     padding: 2em;
@@ -445,7 +444,7 @@ span.weight-300 {
 .studio-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
 .studio-tab { padding: 0.75rem 1.25rem; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 1rem; background: #e0e0e0; border: none; border-radius: 8pt; color: #444444; cursor: pointer; transition: all 0.2s ease; }
 .studio-tab:hover { background: #d5d5d5; }
-.studio-tab.active { background: #2196f3; color: white; box-shadow: 0 4px 6px rgba(33, 150, 243, 0.25); }
+.studio-tab.active { background: #2196f3; color: white; }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: 'Montserrat', sans-serif; font-weight: 700; border-radius: 6pt; cursor: pointer; transition: all 0.2s ease; border: none; padding: 0.75rem 1.25rem; font-size: 1rem; }
 .btn-sm { padding: 0.5rem 0.85rem; font-size: 0.9rem; }
@@ -453,8 +452,12 @@ span.weight-300 {
 .btn-primary:hover:not(:disabled) { background: #1976d2; }
 .btn-secondary { background: #cccccc; color: #333333; }
 .btn-secondary:hover { background: #b3b3b3; }
+.btn-light { background: #e0e0e0; color: #444444; }
+.btn-light:hover:not(:disabled) { background: #d5d5d5; }
 .btn-success { background: #4caf50; color: white; }
 .btn-success:hover { background: #388e3c; }
+.btn-outline { background: transparent; color: #333333; border: 1px solid #cccccc; }
+.btn-outline:hover:not(:disabled) { background: #e0e0e0; border-color: #999999; }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .quadcolumn.clickable {

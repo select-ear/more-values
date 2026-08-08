@@ -111,7 +111,7 @@ export function AxisEditor({ axes, setAxes }) {
         <div>
           <h3>Custom Axes ({axes.length})</h3>
           <p style={{ color: '#555', fontSize: '0.95rem' }}>
-            Define the opposing spectrums for your test. Set vector SVG images and colors for each value.
+            Define the axes and values of your test.
           </p>
         </div>
       </div>
@@ -229,7 +229,7 @@ export function AxisEditor({ axes, setAxes }) {
             <div style={{ marginTop: '1.5rem', background: '#ffffff', padding: '1rem', borderRadius: '8px', border: '2px solid #cccccc' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <h4 style={{ margin: 0 }}>Axis Tiers (Categories)</h4>
-                <button className="small_button" style={{ padding: '4px 10px', fontSize: '10pt', width: 'auto', minWidth: 'auto', margin: 0 }} onClick={() => handleAddTier(idx)}>
+                <button className="btn btn-light btn-sm" style={{ margin: 0 }} onClick={() => handleAddTier(idx)}>
                   <Plus size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Add Tier
                 </button>
               </div>

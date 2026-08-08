@@ -13,7 +13,7 @@ export function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, conf
     }}>
       <div style={{
         background: 'var(--container-bg, var(--bg-primary, #ffffff))', width: '90%', maxWidth: '400px',
-        borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+        borderRadius: '12px',
         overflow: 'hidden'
       }}>
         {/* Header */}

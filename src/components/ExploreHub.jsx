@@ -6,7 +6,15 @@ import { TestCard } from './TestCard';
 export function ExploreHub({ onSelectTest, onEditTest, user, authToken, onViewProfile }) {
   const [tests, setTests] = useState([DEFAULT_8VALUES_TEST]);
   const [search, setSearch] = useState('');
+  const [sortMode, setSortMode] = useState('hot');
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const sortOptions = [
+    { value: 'hot', label: 'Hot' },
+    { value: 'new', label: 'New' },
+    { value: 'top', label: 'Top' }
+  ];
 
   useEffect(() => {
     // Attempt to load community published tests from backend API
@@ -32,10 +40,28 @@ export function ExploreHub({ onSelectTest, onEditTest, user, authToken, onViewPr
     fetchTests();
   }, []);
 
-  const filteredTests = tests.filter(q =>
-    q.title?.toLowerCase().includes(search.toLowerCase()) ||
-    q.description?.toLowerCase().includes(search.toLowerCase())
-  );
+  const getHotScore = (test) => {
+    const views = test.views || 0;
+    const plays = test.plays || 0;
+    const publishedAt = new Date(test.publishedAt || Date.now());
+    const hoursSincePublished = Math.max(0, (Date.now() - publishedAt) / (1000 * 60 * 60));
+    return (views + (plays * 5)) / Math.pow(hoursSincePublished + 2, 1.5);
+  };
+
+  const getSortValue = (test) => {
+    if (sortMode === 'hot') return getHotScore(test);
+    if (sortMode === 'new') return new Date(test.publishedAt || 0).getTime();
+    if (sortMode === 'top') return (test.views || 0) + ((test.plays || 0) * 5);
+    return 0;
+  };
+
+  const filteredTests = tests.filter(q => {
+    const s = search.toLowerCase();
+    const tagsStr = typeof q.tags === 'string' ? q.tags.toLowerCase() : JSON.stringify(q.tags || []).toLowerCase();
+    return q.title?.toLowerCase().includes(s) ||
+           q.description?.toLowerCase().includes(s) ||
+           tagsStr.includes(s);
+  }).sort((a, b) => getSortValue(b) - getSortValue(a));
 
   return (
     <div className="container">
@@ -45,17 +71,73 @@ export function ExploreHub({ onSelectTest, onEditTest, user, authToken, onViewPr
           Explore community-made tests, or make your own!
         </p>
 
-        {/* Search Input */}
-        <div style={{ position: 'relative', maxWidth: '500px', margin: '1.5rem auto' }}>
-          <Search size={18} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-muted)' }} />
-          <input
-            type="text"
-            className="form-input"
-            style={{ paddingLeft: '2.5rem' }}
-            placeholder="Search tests by title or keyword..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        {/* Search & Sort Options */}
+        <div style={{ display: 'flex', gap: '1rem', maxWidth: '600px', margin: '1.5rem auto' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <Search size={18} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-muted)' }} />
+            <input
+              type="text"
+              className="form-input"
+              style={{ paddingLeft: '2.5rem' }}
+              placeholder="Search tests or tags..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div style={{ position: 'relative', width: '140px' }}>
+            <button 
+              className="btn btn-secondary" 
+              style={{ width: '100%', justifyContent: 'space-between', padding: '0.65rem 1rem' }}
+              onClick={() => setIsSortOpen(!isSortOpen)}
+              onBlur={() => setTimeout(() => setIsSortOpen(false), 200)}
+            >
+              {sortOptions.find(o => o.value === sortMode)?.label}
+              <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>▼</span>
+            </button>
+            {isSortOpen && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: '4px',
+                background: '#cccccc',
+                borderRadius: '6pt',
+                overflow: 'hidden',
+                zIndex: 10,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+              }}>
+                {sortOptions.map((opt, idx) => (
+                  <div 
+                    key={opt.value}
+                    style={{
+                      padding: '0.65rem 1rem',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontFamily: "'Montserrat', sans-serif",
+                      color: '#333333',
+                      borderBottom: idx === sortOptions.length - 1 ? 'none' : '1px solid #b3b3b3',
+                      background: sortMode === opt.value ? '#b3b3b3' : 'transparent',
+                      textAlign: 'left'
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setSortMode(opt.value);
+                      setIsSortOpen(false);
+                    }}
+                    onMouseEnter={(e) => {
+                      if (sortMode !== opt.value) e.target.style.background = '#bfbfbf';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (sortMode !== opt.value) e.target.style.background = 'transparent';
+                    }}
+                  >
+                    {opt.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

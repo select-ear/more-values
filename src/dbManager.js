@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = path.join(__dirname, '..', 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.sqlite');
 
 class DatabaseManager {
@@ -64,6 +64,20 @@ class DatabaseManager {
       );
     `);
     
+    // Dynamically add columns for engagement and tags if they don't exist
+    const columns = await this.db.all("PRAGMA table_info(tests)");
+    const colNames = columns.map(c => c.name);
+    
+    if (!colNames.includes('views')) {
+      await this.db.run("ALTER TABLE tests ADD COLUMN views INTEGER DEFAULT 0");
+    }
+    if (!colNames.includes('plays')) {
+      await this.db.run("ALTER TABLE tests ADD COLUMN plays INTEGER DEFAULT 0");
+    }
+    if (!colNames.includes('tags')) {
+      await this.db.run("ALTER TABLE tests ADD COLUMN tags TEXT DEFAULT '[]'");
+    }
+
     return this.db;
   }
   
@@ -117,7 +131,7 @@ class DatabaseManager {
    */
   async getPublishedTests() {
     return await this.getDb().all(`
-      SELECT q.id, q.title, q.description, q.author, q.axisCount, q.questionCount, q.publishedAt, u.username as ownerUsername
+      SELECT q.id, q.title, q.description, q.author, q.axisCount, q.questionCount, q.publishedAt, q.views, q.plays, q.tags, u.username as ownerUsername
       FROM tests q
       LEFT JOIN users u ON q.ownerId = u.id
       WHERE (q.isDraft = 0 OR q.isDraft IS NULL) AND q.deletedAt IS NULL
@@ -169,9 +183,14 @@ class DatabaseManager {
    */
   async saveTest(testId, ownerId, test, isDraft) {
     const documentString = JSON.stringify(test);
+    const tagsString = JSON.stringify(test.tags || []);
     await this.getDb().run(`
-      INSERT OR REPLACE INTO tests (id, ownerId, title, description, author, axisCount, questionCount, publishedAt, document, isDraft)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO tests (id, ownerId, title, description, author, axisCount, questionCount, publishedAt, document, isDraft, tags, views, plays)
+      VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        COALESCE((SELECT views FROM tests WHERE id = ?), 0),
+        COALESCE((SELECT plays FROM tests WHERE id = ?), 0)
+      )
     `, [
       testId,
       ownerId,
@@ -182,7 +201,10 @@ class DatabaseManager {
       test.questions?.length || 0,
       test.publishedAt,
       documentString,
-      isDraft
+      isDraft,
+      tagsString,
+      testId,
+      testId
     ]);
   }
 
@@ -201,7 +223,7 @@ class DatabaseManager {
 
   async getTestsByOwner(ownerId) {
     return await this.getDb().all(`
-      SELECT q.id, q.title, q.description, q.author, q.axisCount, q.questionCount, q.publishedAt, q.isDraft, q.deletedAt
+      SELECT q.id, q.title, q.description, q.author, q.axisCount, q.questionCount, q.publishedAt, q.isDraft, q.deletedAt, q.views, q.plays, q.tags
       FROM tests q
       WHERE q.ownerId = ?
       ORDER BY q.publishedAt DESC
@@ -210,6 +232,33 @@ class DatabaseManager {
 
   async cleanupRecycleBin() {
     await this.getDb().run(`DELETE FROM tests WHERE deletedAt IS NOT NULL AND deletedAt < datetime('now', '-30 days')`);
+  }
+
+  async incrementTestViews(id) {
+    await this.getDb().run('UPDATE tests SET views = views + 1 WHERE id = ?', [id]);
+  }
+
+  async incrementTestPlays(id) {
+    await this.getDb().run('UPDATE tests SET plays = plays + 1 WHERE id = ?', [id]);
+  }
+
+  /**
+   * Extracts all unique tags used across all tests and seeds it with default tags.
+   */
+  async getAllTags() {
+    const rows = await this.getDb().all("SELECT tags FROM tests WHERE tags IS NOT NULL AND tags != '[]'");
+    const tagsSet = new Set(['politics', 'leftism', 'rightism']);
+    rows.forEach(row => {
+      try {
+        const parsed = JSON.parse(row.tags);
+        if (Array.isArray(parsed)) {
+          parsed.forEach(t => {
+            if (t && typeof t === 'string') tagsSet.add(t.toLowerCase().trim());
+          });
+        }
+      } catch (e) {}
+    });
+    return Array.from(tagsSet);
   }
 }
 

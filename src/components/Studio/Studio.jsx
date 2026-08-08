@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Download, Upload, Play, Globe, RotateCcw, Save, Check, Palette, Image as ImageIcon, Trash2, Undo2, Redo2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, Upload, Play, Globe, RotateCcw, Save, Check, Palette, Image as ImageIcon, Trash2, Undo2, Redo2, X, AlertTriangle } from 'lucide-react';
 import { AxisEditor } from './AxisEditor';
 import { QuestionEditor } from './QuestionEditor';
 import { IdeologyEditor } from './IdeologyEditor';
@@ -12,6 +12,38 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
   const [publishedMsg, setPublishedMsg] = useState(null);
   const [cropModalState, setCropModalState] = useState({ isOpen: false, imageSrc: null, type: null });
   const [errorMsg, setErrorMsg] = useState(null);
+  
+  // Tag Autocomplete State
+  const [tagInput, setTagInput] = useState('');
+  const [availableTags, setAvailableTags] = useState([]);
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/tags')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.tags) {
+          setAvailableTags(data.tags);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleAddTag = (tag) => {
+    if ((test.tags || []).length >= 5) return;
+    const newTag = tag.trim().toLowerCase();
+    const currentTags = test.tags || [];
+    if (newTag && !currentTags.includes(newTag)) {
+      setTest({ ...test, tags: [...currentTags, newTag] });
+    }
+    setTagInput('');
+    setShowTagDropdown(false);
+  };
+
+  const handleRemoveTag = (tag) => {
+    const newTags = (test.tags || []).filter(t => t !== tag);
+    setTest({ ...test, tags: newTags });
+  };
 
   // References for unmount auto-save
   const testRef = React.useRef(test);
@@ -156,6 +188,15 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
         </div>
       </div>
 
+      {!user && (
+        <div style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.5)', color: '#d97706', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 500 }}>
+          <AlertTriangle size={20} style={{ flexShrink: 0 }} />
+          <div>
+            <strong>You are not signed in.</strong> You can design and test your test locally, but you must create an account or log in to save and publish it.
+          </div>
+        </div>
+      )}
+
       {publishedMsg && (
         <div style={{ background: 'rgba(22, 163, 74, 0.15)', border: '1px solid #16a34a', color: '#4caf50', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Check size={18} />
@@ -174,7 +215,7 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
       <div className="axis-card" style={{ textAlign: 'left', marginBottom: '2rem', padding: '1.5rem' }}>
         <h3 style={{ marginBottom: '1rem' }}>General Test Settings</h3>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginBottom: '1rem' }}>
           <div className="form-group">
             <label className="form-label">Test Title</label>
             <input
@@ -185,11 +226,9 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
               placeholder="e.g. 8values Political Spectrum"
             />
           </div>
-
-
         </div>
 
-        <div className="form-group">
+        <div className="form-group" style={{ marginBottom: '1rem' }}>
           <label className="form-label">Description</label>
           <textarea
             rows={2}
@@ -198,6 +237,52 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
             onChange={(e) => handleMetadataChange('description', e.target.value)}
             placeholder="Brief explanation of what this test measures..."
           />
+        </div>
+
+        <div className="form-group" style={{ gridColumn: '1 / -1', position: 'relative', marginBottom: '1rem' }}>
+          <label className="form-label">Tags (max 5)</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            {(test.tags || []).map(t => (
+              <span key={t} style={{ background: 'var(--btn-bg, #e0e0e0)', color: 'var(--text-main, #444)', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                {t}
+                <X size={14} style={{ cursor: 'pointer' }} onClick={() => handleRemoveTag(t)} />
+              </span>
+            ))}
+          </div>
+          <input
+            type="text"
+            className="form-input"
+            value={tagInput}
+            onChange={(e) => {
+              setTagInput(e.target.value);
+              setShowTagDropdown(true);
+            }}
+            onFocus={() => setShowTagDropdown(true)}
+            onBlur={() => setTimeout(() => setShowTagDropdown(false), 200)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                handleAddTag(tagInput);
+              }
+            }}
+            placeholder={(test.tags || []).length < 5 ? "Type a tag and press Enter..." : "Maximum 5 tags reached"}
+            disabled={(test.tags || []).length >= 5}
+          />
+          {showTagDropdown && tagInput.trim().length > 0 && availableTags.filter(t => t.includes(tagInput.toLowerCase()) && !(test.tags || []).includes(t)).length > 0 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#ffffff', border: '1px solid #cccccc', borderRadius: '4px', zIndex: 10, maxHeight: '150px', overflowY: 'auto', marginTop: '0.25rem', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' }}>
+              {availableTags.filter(t => t.includes(tagInput.toLowerCase()) && !(test.tags || []).includes(t)).map(option => (
+                <div 
+                  key={option} 
+                  style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', borderBottom: '1px solid #eeeeee', color: '#333333' }}
+                  onMouseDown={(e) => { e.preventDefault(); handleAddTag(option); }}
+                  onMouseEnter={(e) => e.target.style.background = '#f0f0f0'}
+                  onMouseLeave={(e) => e.target.style.background = '#ffffff'}
+                >
+                  {option}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

@@ -34,12 +34,12 @@ export function Navbar({ activeTab, setActiveTab, user, onLoginClick, onLogoutCl
               Profile
             </button>
             <button className="menu-btn" onClick={onLogoutClick}>
-              Sign Out
+              Log Out
             </button>
           </>
         ) : (
           <button className="menu-btn" onClick={onLoginClick}>
-            Sign In / Register
+            Log In / Register
           </button>
         )}
       </nav>

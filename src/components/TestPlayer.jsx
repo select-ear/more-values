@@ -9,6 +9,12 @@ function InnerTestPlayer({ test, onComplete, onEditInStudio }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState({});
 
+  useEffect(() => {
+    if (test && test.id && test.id !== '8values-classic') {
+      fetch(`/api/tests/${test.id}/view`, { method: 'POST' }).catch(() => {});
+    }
+  }, [test?.id]);
+
   if (!test || !test.questions || test.questions.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '3rem' }}>
@@ -23,7 +29,7 @@ function InnerTestPlayer({ test, onComplete, onEditInStudio }) {
     );
   }
 
-  // 1. Home Screen - 100% 8values index.html structure
+  // 1. Home Screen
   if (viewState === 'home') {
     return (
       <div>
@@ -76,7 +82,12 @@ function InnerTestPlayer({ test, onComplete, onEditInStudio }) {
         </div>
         <br />
 
-        <button className="button" style={{ fontSize: '36pt' }} onClick={() => setViewState('instructions')}>
+        <button className="button" style={{ fontSize: '36pt' }} onClick={() => {
+          if (test && test.id && test.id !== '8values-classic') {
+            fetch(`/api/tests/${test.id}/play`, { method: 'POST' }).catch(() => {});
+          }
+          setViewState('instructions');
+        }}>
           Click here to start!
         </button>
         <br />
@@ -131,7 +142,7 @@ function InnerTestPlayer({ test, onComplete, onEditInStudio }) {
     );
   }
 
-  // 2. Instructions Screen - 100% 8values instructions.html structure
+  // 2. Instructions Screen
   if (viewState === 'instructions') {
     return (
       <div>
@@ -151,7 +162,7 @@ function InnerTestPlayer({ test, onComplete, onEditInStudio }) {
     );
   }
 
-  // 3. Test Player Screen - 100% 8values test.html structure
+  // 3. Test Player Screen
   const currentQuestion = test.questions[currentIdx];
   const totalQuestions = test.questions.length;
 

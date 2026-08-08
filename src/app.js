@@ -249,6 +249,19 @@ app.put('/api/profile', authMiddleware, requireAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/tags
+ * Fetches a list of all unique tags used across tests.
+ */
+app.get('/api/tags', async (req, res) => {
+  try {
+    const tags = await dbManager.getAllTags();
+    res.json({ success: true, tags });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/tests
  * Fetches a list of all publicly published tests from all users.
  */
@@ -286,6 +299,32 @@ app.get('/api/tests/:id', async (req, res) => {
 });
 
 /**
+ * POST /api/tests/:id/view
+ * Increments the view counter for a specific test.
+ */
+app.post('/api/tests/:id/view', async (req, res) => {
+  try {
+    await dbManager.incrementTestViews(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/tests/:id/play
+ * Increments the play counter for a specific test.
+ */
+app.post('/api/tests/:id/play', async (req, res) => {
+  try {
+    await dbManager.incrementTestPlays(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * POST /api/publish
  * Publishes or saves a draft of a test.
  * If the user does not own the test (e.g. forking someone else's test),
@@ -313,6 +352,16 @@ app.post('/api/publish', authMiddleware, requireAuth, async (req, res) => {
     }
     if (test.ideologies && (!Array.isArray(test.ideologies) || test.ideologies.length > 100)) {
       return res.status(400).json({ success: false, error: 'Test cannot exceed 100 ideologies' });
+    }
+    if (test.tags) {
+      if (!Array.isArray(test.tags) || test.tags.length > 5) {
+        return res.status(400).json({ success: false, error: 'Test cannot exceed 5 tags' });
+      }
+      for (const tag of test.tags) {
+        if (typeof tag !== 'string' || tag.length > 30) {
+          return res.status(400).json({ success: false, error: 'Tags must be strings under 30 characters' });
+        }
+      }
     }
     if (test.thumbnail) {
       if (typeof test.thumbnail !== 'string' || test.thumbnail.length > 3 * 1024 * 1024 || !test.thumbnail.startsWith('data:image/')) {

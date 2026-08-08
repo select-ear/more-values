@@ -81,7 +81,7 @@ export function AuthModal({ onClose, onLoginSuccess }) {
             />
           </div>
           <button type="submit" className="btn btn-primary" style={{ marginTop: '0.5rem' }} disabled={loading}>
-            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Register')}
+            {loading ? 'Processing...' : (isLogin ? 'Log In' : 'Register')}
           </button>
         </form>
 
@@ -91,7 +91,7 @@ export function AuthModal({ onClose, onLoginSuccess }) {
             style={{ color: '#2196f3', cursor: 'pointer', fontWeight: 'bold' }}
             onClick={() => { setIsLogin(!isLogin); setError(null); }}
           >
-            {isLogin ? 'Register' : 'Sign In'}
+            {isLogin ? 'Register' : 'Log In'}
           </span>
         </div>
       </div>

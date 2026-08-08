@@ -4,7 +4,7 @@ import { DEFAULT_8VALUES_TEST } from '../utils/default8values';
 import { TestCard } from './TestCard';
 
 export function ExploreHub({ onSelectTest, onEditTest, user, authToken, onViewProfile }) {
-  const [tests, setTests] = useState([DEFAULT_8VALUES_TEST]);
+  const [tests, setTests] = useState([]);
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState('hot');
   const [isSortOpen, setIsSortOpen] = useState(false);

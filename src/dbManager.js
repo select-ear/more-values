@@ -1,11 +1,10 @@
 /**
  * dbManager.js
  * 
- * Provides a Data Access Object (DAO) pattern around the SQLite database.
- * Abstracts all SQL queries and schema management away from the Express routing logic.
+ * Provides a Data Access Object (DAO) pattern around the database.
+ * Supports both local SQLite and remote Turso via @libsql/client.
  */
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import { createClient } from '@libsql/client';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -21,25 +20,27 @@ class DatabaseManager {
   }
 
   /**
-   * Initializes the SQLite database connection and sets up the schema.
-   * Creates 'users' and 'tests' tables if they don't already exist.
-   * @param {string} filename - The path to the SQLite database file.
+   * Initializes the database connection and sets up the schema.
+   * If TURSO_DATABASE_URL is provided, it connects to Turso.
+   * Otherwise, it defaults to a local file database.
    */
   async init(filename = DB_FILE) {
-    // Ensure data directory exists if using a file path in the data dir
     if (filename.includes(DATA_DIR) && !fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
     
-    this.db = await open({
-      filename,
-      driver: sqlite3.Database
+    const url = process.env.TURSO_DATABASE_URL || `file:${filename}`;
+    const authToken = process.env.TURSO_AUTH_TOKEN;
+
+    this.db = createClient({
+      url,
+      authToken
     });
 
-    await this.db.run(`
+    await this.run(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
-        username TEXT UNIQUE COLLATE NOCASE,
+        username TEXT UNIQUE,
         password TEXT,
         bio TEXT,
         socialMedia TEXT,
@@ -47,7 +48,7 @@ class DatabaseManager {
       );
     `);
 
-    await this.db.run(`
+    await this.run(`
       CREATE TABLE IF NOT EXISTS tests (
         id TEXT PRIMARY KEY,
         ownerId TEXT,
@@ -65,17 +66,17 @@ class DatabaseManager {
     `);
     
     // Dynamically add columns for engagement and tags if they don't exist
-    const columns = await this.db.all("PRAGMA table_info(tests)");
+    const columns = await this.all("PRAGMA table_info(tests)");
     const colNames = columns.map(c => c.name);
     
     if (!colNames.includes('views')) {
-      await this.db.run("ALTER TABLE tests ADD COLUMN views INTEGER DEFAULT 0");
+      await this.run("ALTER TABLE tests ADD COLUMN views INTEGER DEFAULT 0");
     }
     if (!colNames.includes('plays')) {
-      await this.db.run("ALTER TABLE tests ADD COLUMN plays INTEGER DEFAULT 0");
+      await this.run("ALTER TABLE tests ADD COLUMN plays INTEGER DEFAULT 0");
     }
     if (!colNames.includes('tags')) {
-      await this.db.run("ALTER TABLE tests ADD COLUMN tags TEXT DEFAULT '[]'");
+      await this.run("ALTER TABLE tests ADD COLUMN tags TEXT DEFAULT '[]'");
     }
 
     return this.db;
@@ -83,40 +84,51 @@ class DatabaseManager {
   
   async close() {
     if (this.db) {
-      await this.db.close();
+      this.db.close();
       this.db = null;
     }
   }
 
-  getDb() {
-    if (!this.db) {
-      throw new Error("Database not initialized. Call init() first.");
-    }
-    return this.db;
+  // --- Core Query Wrappers ---
+
+  async run(sql, args = []) {
+    if (!this.db) throw new Error("Database not initialized.");
+    return await this.db.execute({ sql, args });
+  }
+
+  async get(sql, args = []) {
+    if (!this.db) throw new Error("Database not initialized.");
+    const res = await this.db.execute({ sql, args });
+    return res.rows.length > 0 ? res.rows[0] : undefined;
+  }
+
+  async all(sql, args = []) {
+    if (!this.db) throw new Error("Database not initialized.");
+    const res = await this.db.execute({ sql, args });
+    return res.rows;
   }
 
   // --- Users ---
   
-  /**
-   * Fetches a user by their username (case-insensitive due to COLLATE NOCASE).
-   */
   async getUserByUsername(username) {
-    return await this.getDb().get('SELECT * FROM users WHERE username = ?', [username]);
+    // Note: SQLite COLLATE NOCASE isn't natively standard in all SQL engines, but works in Turso/libsql.
+    // Using LOWER for safety across queries.
+    return await this.get('SELECT * FROM users WHERE LOWER(username) = LOWER(?)', [username]);
   }
 
   async getUserById(id) {
-    return await this.getDb().get('SELECT * FROM users WHERE id = ?', [id]);
+    return await this.get('SELECT * FROM users WHERE id = ?', [id]);
   }
 
   async createUser(id, username, passwordHash) {
-    await this.getDb().run(
+    await this.run(
       'INSERT INTO users (id, username, password) VALUES (?, ?, ?)',
       [id, username, passwordHash]
     );
   }
 
   async updateUserProfile(id, bio, socialMedia, profilePicture) {
-    await this.getDb().run(`
+    await this.run(`
       UPDATE users 
       SET bio = ?, socialMedia = ?, profilePicture = ?
       WHERE id = ?
@@ -125,12 +137,8 @@ class DatabaseManager {
 
   // --- Tests ---
 
-  /**
-   * Retrieves all published tests (not drafts, not deleted).
-   * Joins with the users table to include the owner's username.
-   */
   async getPublishedTests() {
-    return await this.getDb().all(`
+    return await this.all(`
       SELECT q.id, q.title, q.description, q.author, q.axisCount, q.questionCount, q.publishedAt, q.views, q.plays, q.tags, u.username as ownerUsername
       FROM tests q
       LEFT JOIN users u ON q.ownerId = u.id
@@ -140,12 +148,12 @@ class DatabaseManager {
   }
 
   async getTestBySlug(username, slug) {
-    const row = await this.getDb().get(`
+    const row = await this.get(`
       SELECT t.document, t.id
       FROM tests t
       JOIN users u ON t.ownerId = u.id
       WHERE LOWER(u.username) = LOWER(?)
-        AND REPLACE(t.title, ' ', '-') = ?
+        AND REPLACE(LOWER(t.title), ' ', '-') = LOWER(?)
         AND t.isDraft = 0
         AND t.deletedAt IS NULL
       ORDER BY t.publishedAt DESC
@@ -161,30 +169,26 @@ class DatabaseManager {
   }
 
   async getTestById(id) {
-    const row = await this.getDb().get('SELECT document FROM tests WHERE id = ?', [id]);
+    const row = await this.get('SELECT document FROM tests WHERE id = ?', [id]);
     return row ? JSON.parse(row.document) : null;
   }
 
   async getTestOwnerId(id) {
-    const row = await this.getDb().get('SELECT ownerId FROM tests WHERE id = ?', [id]);
+    const row = await this.get('SELECT ownerId FROM tests WHERE id = ?', [id]);
     return row ? row.ownerId : null;
   }
 
   async checkTitleExistsForUser(ownerId, title, excludeTestId) {
-    return await this.getDb().get(
-      'SELECT id FROM tests WHERE ownerId = ? AND title = ? AND id != ? AND deletedAt IS NULL', 
+    return await this.get(
+      'SELECT id FROM tests WHERE ownerId = ? AND LOWER(title) = LOWER(?) AND id != ? AND deletedAt IS NULL', 
       [ownerId, title, excludeTestId]
     );
   }
 
-  /**
-   * Upserts (INSERT OR REPLACE) a test into the database.
-   * The actual test data is stored as a JSON string in the 'document' column.
-   */
   async saveTest(testId, ownerId, test, isDraft) {
     const documentString = JSON.stringify(test);
     const tagsString = JSON.stringify(test.tags || []);
-    await this.getDb().run(`
+    await this.run(`
       INSERT OR REPLACE INTO tests (id, ownerId, title, description, author, axisCount, questionCount, publishedAt, document, isDraft, tags, views, plays)
       VALUES (
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
@@ -210,19 +214,19 @@ class DatabaseManager {
 
   async deleteTestSoft(id) {
     const now = new Date().toISOString();
-    await this.getDb().run('UPDATE tests SET deletedAt = ? WHERE id = ?', [now, id]);
+    await this.run('UPDATE tests SET deletedAt = ? WHERE id = ?', [now, id]);
   }
 
   async deleteTestPermanent(id) {
-    await this.getDb().run('DELETE FROM tests WHERE id = ?', [id]);
+    await this.run('DELETE FROM tests WHERE id = ?', [id]);
   }
 
   async restoreTest(id) {
-    await this.getDb().run('UPDATE tests SET deletedAt = NULL WHERE id = ?', [id]);
+    await this.run('UPDATE tests SET deletedAt = NULL WHERE id = ?', [id]);
   }
 
   async getTestsByOwner(ownerId) {
-    return await this.getDb().all(`
+    return await this.all(`
       SELECT q.id, q.title, q.description, q.author, q.axisCount, q.questionCount, q.publishedAt, q.isDraft, q.deletedAt, q.views, q.plays, q.tags
       FROM tests q
       WHERE q.ownerId = ?
@@ -231,22 +235,19 @@ class DatabaseManager {
   }
 
   async cleanupRecycleBin() {
-    await this.getDb().run(`DELETE FROM tests WHERE deletedAt IS NOT NULL AND deletedAt < datetime('now', '-30 days')`);
+    await this.run(`DELETE FROM tests WHERE deletedAt IS NOT NULL AND deletedAt < datetime('now', '-30 days')`);
   }
 
   async incrementTestViews(id) {
-    await this.getDb().run('UPDATE tests SET views = views + 1 WHERE id = ?', [id]);
+    await this.run('UPDATE tests SET views = views + 1 WHERE id = ?', [id]);
   }
 
   async incrementTestPlays(id) {
-    await this.getDb().run('UPDATE tests SET plays = plays + 1 WHERE id = ?', [id]);
+    await this.run('UPDATE tests SET plays = plays + 1 WHERE id = ?', [id]);
   }
 
-  /**
-   * Extracts all unique tags used across all tests and seeds it with default tags.
-   */
   async getAllTags() {
-    const rows = await this.getDb().all("SELECT tags FROM tests WHERE tags IS NOT NULL AND tags != '[]'");
+    const rows = await this.all("SELECT tags FROM tests WHERE tags IS NOT NULL AND tags != '[]'");
     const tagsSet = new Set(['politics', 'leftism', 'rightism']);
     rows.forEach(row => {
       try {

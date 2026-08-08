@@ -26,13 +26,19 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 // Generate or load JWT Secret
-let JWT_SECRET = 'fallback-dev-secret-do-not-use-in-prod';
-if (fs.existsSync(SECRET_FILE)) {
-  const secretData = JSON.parse(fs.readFileSync(SECRET_FILE, 'utf8'));
-  JWT_SECRET = secretData.secret;
-} else {
-  JWT_SECRET = crypto.randomBytes(64).toString('hex');
-  fs.writeFileSync(SECRET_FILE, JSON.stringify({ secret: JWT_SECRET }));
+let JWT_SECRET = process.env.JWT_SECRET || 'fallback-dev-secret-do-not-use-in-prod';
+if (!process.env.JWT_SECRET) {
+  if (fs.existsSync(SECRET_FILE)) {
+    const secretData = JSON.parse(fs.readFileSync(SECRET_FILE, 'utf8'));
+    JWT_SECRET = secretData.secret;
+  } else {
+    JWT_SECRET = crypto.randomBytes(64).toString('hex');
+    try {
+      fs.writeFileSync(SECRET_FILE, JSON.stringify({ secret: JWT_SECRET }));
+    } catch (e) {
+      console.warn("Could not save secret.json locally.");
+    }
+  }
 }
 
 function generateId() {

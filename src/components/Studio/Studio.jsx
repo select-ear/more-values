@@ -192,7 +192,7 @@ export function Studio({ test, setTest, onPlayTest, onPublish, isThemeEditMode, 
         <div style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.5)', color: '#d97706', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 500 }}>
           <AlertTriangle size={20} style={{ flexShrink: 0 }} />
           <div>
-            <strong>You are not signed in.</strong> You can design and test your test locally, but you must create an account or log in to save and publish it.
+            <strong>You are not logged in.</strong> You can design and test your test locally, but you must create an account or log in to save and publish it.
           </div>
         </div>
       )}

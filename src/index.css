@@ -45,7 +45,6 @@ p.axis_name {
     color: var(--heading-color, #333333);
     font-size: 19pt;
     font-family: 'Montserrat', sans-serif;
-    font-weight: 700;
 }
 
 p.question {
@@ -289,23 +288,28 @@ img.quadcolumn:hover {
 
 .spacer {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
+}
+
+.spacer > div {
+    margin-top: 10px;
+    display: inline-block;
+    text-align: center;
 }
 
 div.explanation_blurb_left, div.explanation_blurb_right {
     vertical-align: top;
-    width: 38%;
+    width: 37%;
+    margin-left: 1%;
+    margin-right: 1%;
 }
 
 div.explanation_axis {
-    width: 20%;
-    text-align: center;
+    width: 20.9%;
+    vertical-align: top;
 }
 
 .arrow {
-    width: 70%;
+    width: 60%;
     height: auto;
 }
 

@@ -25,12 +25,13 @@ class DatabaseManager {
    * Otherwise, it defaults to a local file database.
    */
   async init(filename = DB_FILE) {
-    if (filename.includes(DATA_DIR) && !fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    
     const url = process.env.TURSO_DATABASE_URL || `file:${filename}`;
     const authToken = process.env.TURSO_AUTH_TOKEN;
+
+    // Only attempt to create local directories if we're actually using local SQLite
+    if (!process.env.TURSO_DATABASE_URL && filename.includes(DATA_DIR) && !fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
 
     this.db = createClient({
       url,

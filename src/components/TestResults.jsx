@@ -99,13 +99,13 @@ export function TestResults({ test, results, onRetake, onEditInStudio }) {
           Back
         </button>
 
-        <button className="small_button" style={{ margin: '0 8px' }} onClick={handleCopyLink}>
+        {/* <button className="small_button" style={{ margin: '0 8px' }} onClick={handleCopyLink}>
           {copied ? 'Copied URL!' : 'Share Link'}
         </button>
 
         <button className="small_button" style={{ margin: '0 8px' }} onClick={onEditInStudio}>
           Edit in Creator
-        </button>
+        </button> */}
       </div>
     </div>
   );
